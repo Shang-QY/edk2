@@ -1,8 +1,10 @@
 /** @file
-  Entry point to the Standalone MM Foundation when initialized during the SEC
-  phase on ARM platforms
+  Entry point to the Standalone MM Foundation on RiscV platform.
 
 Copyright (c) 2017 - 2021, Arm Ltd. All rights reserved.<BR>
+Copyright (c) 2023, Ventana Micro System Inc. All rights reserved.<BR>
+Copyright (c) 2023, Intel Corporation. All rights reserved.<BR>
+
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -19,33 +21,34 @@ typedef struct {
   UINT8     Type;    /* type of the structure */
   UINT8     Version; /* version of this structure */
   UINT16    Size;    /* size of this structure in bytes */
-  UINT32    Attr;    /* attributes: unused bits SBZ */
+  UINT32    Attr;    /* attributes */
 } EFI_PARAM_HEADER;
 
 typedef struct {
-  UINT64    Mpidr;
-  UINT32    LinearId;
+  UINT32    ProcessorId;
+  UINT32    Package;
+  UINT32    Core;
   UINT32    Flags;
-} EFI_SECURE_PARTITION_CPU_INFO;
+} EFI_RISCV_MM_CPU_INFO;
 
 typedef struct {
   EFI_PARAM_HEADER                 Header;
-  UINT64                           SpMemBase;
-  UINT64                           SpMemLimit;
-  UINT64                           SpImageBase;
-  UINT64                           SpStackBase;
-  UINT64                           SpHeapBase;
-  UINT64                           SpNsCommBufBase;
-  UINT64                           SpSharedBufBase;
-  UINT64                           SpImageSize;
-  UINT64                           SpPcpuStackSize;
-  UINT64                           SpHeapSize;
-  UINT64                           SpNsCommBufSize;
-  UINT64                           SpSharedBufSize;
-  UINT32                           NumSpMemRegions;
+  UINT64                           MmMemBase;
+  UINT64                           MmMemLimit;
+  UINT64                           MmImageBase;
+  UINT64                           MmStackBase;
+  UINT64                           MmHeapBase;
+  UINT64                           MmNsCommBufBase;
+  UINT64                           MmSharedBufBase;
+  UINT64                           MmImageSize;
+  UINT64                           MmPcpuStackSize;
+  UINT64                           MmHeapSize;
+  UINT64                           MmNsCommBufSize;
+  UINT64                           MmSharedBufSize;
+  UINT32                           NumMmMemRegions;
   UINT32                           NumCpus;
-  EFI_SECURE_PARTITION_CPU_INFO    *CpuInfo;
-} EFI_SECURE_PARTITION_BOOT_INFO;
+  EFI_RISCV_MM_CPU_INFO            *CpuInfo;
+} EFI_RISCV_MM_BOOT_INFO;
 
 typedef
 EFI_STATUS
@@ -58,7 +61,6 @@ EFI_STATUS
 typedef struct {
   PI_MM_CPU_DRIVER_ENTRYPOINT    *MmCpuDriverEpPtr;
 } MM_CPU_DRIVER_EP_DESCRIPTOR;
-
 typedef RETURN_STATUS (*REGION_PERMISSION_UPDATE_FUNC) (
   IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
   IN  UINT64                Length
@@ -145,8 +147,8 @@ LocateStandaloneMmCorePeCoffData (
 VOID *
 EFIAPI
 CreateHobListFromBootInfo (
-  IN  OUT  PI_MM_CPU_DRIVER_ENTRYPOINT  *CpuDriverEntryPoint,
-  IN       EFI_SECURE_PARTITION_BOOT_INFO      *PayloadBootInfo
+  IN  OUT  PI_MM_CPU_DRIVER_ENTRYPOINT    *CpuDriverEntryPoint,
+  IN       EFI_RISCV_MM_BOOT_INFO         *PayloadBootInfo
   );
 
 /**

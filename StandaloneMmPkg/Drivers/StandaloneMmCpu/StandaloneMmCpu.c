@@ -10,10 +10,17 @@
 
 #include <Base.h>
 #include <Pi/PiMmCis.h>
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
 #include <Library/DebugLib.h>
-#include <Library/ArmSvcLib.h>
-#include <Library/ArmLib.h>
+#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
+  #include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+  #include <Library/ArmSvcLib.h>
+  #include <Library/ArmLib.h>
+#elif defined (MDE_CPU_RISCV64)
+  #include <Library/RiscV64/StandaloneMmCoreEntryPoint.h>
+  #include <Library/BaseRiscVSbiLib.h>
+#else
+  #error Unsupported Processor Type
+#endif
 #include <Library/BaseMemoryLib.h>
 #include <Library/HobLib.h>
 
@@ -31,7 +38,7 @@ extern EFI_GUID  gEfiStandaloneMmNonSecureBufferGuid;
 // GUID to identify HOB where the entry point of this CPU driver will be
 // populated to allow the entry point driver to invoke it upon receipt of an
 // event
-extern EFI_GUID  gEfiArmTfCpuDriverEpDescriptorGuid;
+extern EFI_GUID  gEfiMmCpuDriverEpDescriptorGuid;
 
 //
 // Private copy of the MM system table for future use
@@ -96,7 +103,7 @@ StandaloneMmCpuInitialize (
   IN EFI_MM_SYSTEM_TABLE  *SystemTable   // not actual systemtable
   )
 {
-  ARM_TF_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
+  MM_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
   EFI_CONFIGURATION_TABLE          *ConfigurationTable;
   MP_INFORMATION_HOB_DATA          *MpInformationHobData;
   EFI_MMRAM_DESCRIPTOR             *NsCommBufMmramRange;
@@ -154,11 +161,11 @@ StandaloneMmCpuInitialize (
   //
   Status = GetGuidedHobData (
              HobStart,
-             &gEfiArmTfCpuDriverEpDescriptorGuid,
+             &gEfiMmCpuDriverEpDescriptorGuid,
              (VOID **)&CpuDriverEntryPointDesc
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "ArmTfCpuDriverEpDesc HOB data extraction failed - 0x%x\n", Status));
+    DEBUG ((DEBUG_ERROR, "MmCpuDriverEpDesc HOB data extraction failed - 0x%x\n", Status));
     return Status;
   }
 
@@ -166,10 +173,10 @@ StandaloneMmCpuInitialize (
   DEBUG ((
     DEBUG_INFO,
     "Sharing Cpu Driver EP *0x%lx = 0x%lx\n",
-    (UINTN)CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr,
-    (UINTN)PiMmStandaloneArmTfCpuDriverEntry
+    (UINTN)CpuDriverEntryPointDesc->MmCpuDriverEpPtr,
+    (UINTN)PiMmStandaloneMmCpuDriverEntry
     ));
-  *(CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr) = PiMmStandaloneArmTfCpuDriverEntry;
+  *(CpuDriverEntryPointDesc->MmCpuDriverEpPtr) = PiMmStandaloneMmCpuDriverEntry;
 
   // Find the descriptor that contains the whereabouts of the buffer for
   // communication with the Normal world.
