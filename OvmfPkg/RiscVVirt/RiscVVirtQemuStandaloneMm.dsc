@@ -138,6 +138,7 @@
   StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
   OvmfPkg/VirtNorFlashDxe/VirtNorFlashStandaloneMm.inf
   MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
+  # UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
 
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf {
     <LibraryClasses>

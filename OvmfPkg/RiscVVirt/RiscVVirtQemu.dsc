@@ -532,3 +532,7 @@
     <LibraryClasses>
       NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   }
+
+!if $(BUILD_STANDALONE_MM) == TRUE
+  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
+!endif
