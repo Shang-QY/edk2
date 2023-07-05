@@ -92,17 +92,17 @@
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumGuidedExtractHandler|0x2
 
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFdBaseAddress|0x20000000
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFirmwareFdSize|0x01000000
+  # gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFdBaseAddress|0x22000000
+  # gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFirmwareFdSize|0x01000000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gEfiSecurityPkgTokenSpaceGuid.PcdUserPhysicalPresence|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxAuthVariableSize|0x2800
 
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase|0x20000000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase|0x22000000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize|0x00040000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase|0x20040000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase|0x22040000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x00040000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase|0x20080000
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase|0x22080000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x00040000
   # Serial Port
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
