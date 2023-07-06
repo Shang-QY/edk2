@@ -55,6 +55,24 @@ PiMmStandaloneArmTfCpuDriverEntry (
   );
 
 /**
+  The PI Standalone MM loop to receive request from normal world
+
+  @param  [in] EventId            The event Id.
+  @param  [in] CpuNumber          The CPU number.
+  @param  [in] NsCommBufferAddr   Address of the NS common buffer.
+
+  @retval   EFI_SUCCESS             Success.
+  @retval   EFI_INVALID_PARAMETER   A parameter was invalid.
+  @retval   EFI_ACCESS_DENIED       Access not permitted.
+  @retval   EFI_OUT_OF_RESOURCES    Out of resources.
+  @retval   EFI_UNSUPPORTED         Operation not supported.
+**/
+EFI_STATUS
+PiMmStandaloneRequestLoop (
+  VOID
+  );
+
+/**
   This function is the main entry point for an MM handler dispatch
   or communicate-based callback.
 

@@ -22,6 +22,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
+#include <Library/CpuLib.h>
 
 #include <Protocol/DebugSupport.h> // for EFI_SYSTEM_CONTEXT
 
@@ -76,6 +77,7 @@ STATIC EFI_MM_ENTRY_POINT  mMmEntryPoint = NULL;
   @retval   EFI_SUCCESS             Success.
   @retval   EFI_ACCESS_DENIED       Access not permitted.
 **/
+__attribute__ ((unused))
 STATIC
 EFI_STATUS
 CheckBufferAddr (
@@ -135,6 +137,7 @@ PiMmStandaloneArmTfCpuDriverEntry (
   IN UINTN  NsCommBufferAddr
   )
 {
+#if defined(MDE_CPU_AARCH64) || defined(MDE_CPU_ARM)
   EFI_MM_COMMUNICATE_HEADER  *GuidedEventContext;
   EFI_MM_ENTRY_CONTEXT       MmEntryPointContext;
   EFI_STATUS                 Status;
@@ -223,6 +226,101 @@ PiMmStandaloneArmTfCpuDriverEntry (
   }
 
   PerCpuGuidedEventContext[CpuNumber] = NULL;
+
+  return Status;
+#else
+  return EFI_INVALID_PARAMETER;
+#endif
+}
+
+/**
+  The PI Standalone MM loop to receive request from normal world
+
+  @param  [in] EventId            The event Id.
+  @param  [in] CpuNumber          The CPU number.
+  @param  [in] NsCommBufferAddr   Address of the NS common buffer.
+
+  @retval   EFI_SUCCESS             Success.
+  @retval   EFI_INVALID_PARAMETER   A parameter was invalid.
+  @retval   EFI_ACCESS_DENIED       Access not permitted.
+  @retval   EFI_OUT_OF_RESOURCES    Out of resources.
+  @retval   EFI_UNSUPPORTED         Operation not supported.
+**/
+EFI_STATUS
+PiMmStandaloneRequestLoop (
+  VOID
+  )
+{
+  EFI_MM_COMMUNICATE_HEADER  *GuidedEventContext;
+  EFI_MM_ENTRY_CONTEXT       MmEntryPointContext;
+  UINTN                      NsCommBufferSize, NsCommBufferAddr;
+  EFI_STATUS                 Status;
+
+  NsCommBufferAddr = mNsCommBuffer.PhysicalStart + sizeof (EFI_MMRAM_DESCRIPTOR);
+  // Make sure MessageLength is zero before enter the loop
+  if (((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength != 0) {
+    DEBUG ((DEBUG_ERROR, "MessageLength not zero\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+  
+  while (TRUE) {
+    CpuSleep ();
+    DEBUG ((DEBUG_VERBOSE, "%a: MessageLength:%d\n", __FUNCTION__, ((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength));
+    if (((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength == 0) {
+      continue;
+    }
+    // Find out the size of the buffer passed
+    NsCommBufferSize = ((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength +
+                     sizeof (EFI_MM_COMMUNICATE_HEADER);
+
+    GuidedEventContext = NULL;
+    // Now that the secure world can see the normal world buffer, allocate
+    // memory to copy the communication buffer to the secure world.
+    Status = mMmst->MmAllocatePool (
+                      EfiRuntimeServicesData,
+                      NsCommBufferSize,
+                      (VOID **)&GuidedEventContext
+                      );
+
+    if (Status != EFI_SUCCESS) {
+      DEBUG ((DEBUG_ERROR, "%a: Mem alloc failed\n", __FUNCTION__));
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    CopyMem (GuidedEventContext, (CONST VOID *)NsCommBufferAddr, NsCommBufferSize);
+
+    // Stash the pointer to the allocated Event Context for this CPU
+    PerCpuGuidedEventContext[0] = GuidedEventContext;
+
+    ZeroMem (&MmEntryPointContext, sizeof (EFI_MM_ENTRY_CONTEXT));
+
+    MmEntryPointContext.CurrentlyExecutingCpu = 0;
+    MmEntryPointContext.NumberOfCpus          = mMpInformationHobData->NumberOfProcessors;
+
+    // Populate the MM system table with MP and state information
+    mMmst->CurrentlyExecutingCpu = 0;
+    mMmst->NumberOfCpus          = mMpInformationHobData->NumberOfProcessors;
+    mMmst->CpuSaveStateSize      = 0;
+    mMmst->CpuSaveState          = NULL;
+
+    if (mMmEntryPoint == NULL) {
+      DEBUG ((DEBUG_ERROR, "Mm Entry point Not Found\n"));
+      return EFI_UNSUPPORTED;
+    }
+
+    mMmEntryPoint (&MmEntryPointContext);
+
+    // Free the memory allocation done earlier and reset the per-cpu context
+    ASSERT (GuidedEventContext);
+    CopyMem ((VOID *)NsCommBufferAddr, (CONST VOID *)GuidedEventContext, NsCommBufferSize);
+
+    Status = mMmst->MmFreePool ((VOID *)GuidedEventContext);
+    if (Status != EFI_SUCCESS) {
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    PerCpuGuidedEventContext[0] = NULL;
+  }
 
   return Status;
 }

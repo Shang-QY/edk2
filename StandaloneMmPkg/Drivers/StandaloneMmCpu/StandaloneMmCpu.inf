@@ -44,6 +44,7 @@
   StandaloneMmDriverEntryPoint
 
 [LibraryClasses.RISCV64]
+  CpuLib
   BaseMemoryLib
   DebugLib
   HobLib

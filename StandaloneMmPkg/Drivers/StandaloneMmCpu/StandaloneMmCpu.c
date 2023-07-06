@@ -102,7 +102,7 @@ StandaloneMmCpuInitialize (
   IN EFI_MM_SYSTEM_TABLE  *SystemTable   // not actual systemtable
   )
 {
-  ARM_TF_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
+  ARM_TF_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc = NULL;
   EFI_CONFIGURATION_TABLE          *ConfigurationTable;
   MP_INFORMATION_HOB_DATA          *MpInformationHobData;
   EFI_MMRAM_DESCRIPTOR             *NsCommBufMmramRange;
@@ -112,7 +112,6 @@ StandaloneMmCpuInitialize (
   UINTN                            Index;
   UINTN                            ArraySize;
   VOID                             *HobStart;
-  EFI_MMRAM_HOB_DESCRIPTOR_BLOCK   *MmramRangesHob;
 
   ASSERT (SystemTable != NULL);
   mMmst = SystemTable;
@@ -139,7 +138,7 @@ StandaloneMmCpuInitialize (
   }
 
   // Retrieve the Hoblist from the MMST to extract the details of the NS
-  // communication buffer that has been reserved by S-EL1/EL3
+  // communication buffer that has been reserved for StandloneMMPkg
   ConfigurationTable = mMmst->MmConfigurationTable;
   for (Index = 0; Index < mMmst->NumberOfTableEntries; Index++) {
     if (CompareGuid (&gEfiHobListGuid, &(ConfigurationTable[Index].VendorGuid))) {
@@ -163,19 +162,17 @@ StandaloneMmCpuInitialize (
              &gEfiArmTfCpuDriverEpDescriptorGuid,
              (VOID **)&CpuDriverEntryPointDesc
              );
-  if (EFI_ERROR (Status)) {
+  if (!EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "ArmTfCpuDriverEpDesc HOB data extraction failed - 0x%x\n", Status));
-    return Status;
+    // Share the entry point of the CPU driver
+    DEBUG ((
+      DEBUG_INFO,
+      "Sharing Cpu Driver EP *0x%lx = 0x%lx\n",
+      (UINTN)CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr,
+      (UINTN)PiMmStandaloneArmTfCpuDriverEntry
+      ));
+    *(CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr) = PiMmStandaloneArmTfCpuDriverEntry;
   }
-
-  // Share the entry point of the CPU driver
-  DEBUG ((
-    DEBUG_INFO,
-    "Sharing Cpu Driver EP *0x%lx = 0x%lx\n",
-    (UINTN)CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr,
-    (UINTN)PiMmStandaloneArmTfCpuDriverEntry
-    ));
-  *(CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr) = PiMmStandaloneArmTfCpuDriverEntry;
 
   // Find the descriptor that contains the whereabouts of the buffer for
   // communication with the Normal world.
@@ -192,28 +189,9 @@ StandaloneMmCpuInitialize (
   DEBUG ((DEBUG_INFO, "mNsCommBuffer.PhysicalStart - 0x%lx\n", (UINTN)NsCommBufMmramRange->PhysicalStart));
   DEBUG ((DEBUG_INFO, "mNsCommBuffer.PhysicalSize - 0x%lx\n", (UINTN)NsCommBufMmramRange->PhysicalSize));
 
+  ASSERT (NsCommBufMmramRange->PhysicalSize > sizeof (EFI_MMRAM_DESCRIPTOR));
   CopyMem (&mNsCommBuffer, NsCommBufMmramRange, sizeof (EFI_MMRAM_DESCRIPTOR));
   DEBUG ((DEBUG_INFO, "mNsCommBuffer: 0x%016lx - 0x%lx\n", mNsCommBuffer.CpuStart, mNsCommBuffer.PhysicalSize));
-
-  Status = GetGuidedHobData (
-             HobStart,
-             &gEfiMmPeiMmramMemoryReserveGuid,
-             (VOID **)&MmramRangesHob
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "MmramRangesHob data extraction failed - 0x%x\n", Status));
-    return Status;
-  }
-
-  //
-  // As CreateHobListFromBootInfo(), the base and size of buffer shared with
-  // privileged Secure world software is in second one.
-  //
-  CopyMem (
-    &mSCommBuffer,
-    &MmramRangesHob->Descriptor[0] + 1,
-    sizeof (EFI_MMRAM_DESCRIPTOR)
-    );
 
   //
   // Extract the MP information from the Hoblist
@@ -282,5 +260,10 @@ StandaloneMmCpuInitialize (
     return Status;
   }
 
+  if (!CpuDriverEntryPointDesc) {
+    PiMmStandaloneRequestLoop ();
+    // Not expect to return
+    ASSERT (FALSE);
+  }
   return Status;
 }

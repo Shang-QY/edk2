@@ -30,9 +30,12 @@
 [Sources.X64]
   X64/StandaloneMmCoreHobLib.c
 
-[Sources.AARCH64, Sources.ARM, Sources.RISCV64]
+[Sources.AARCH64, Sources.ARM]
   Arm/StandaloneMmCoreHobLib.c
   Arm/StandaloneMmCoreHobLibInternal.c
+
+[Sources.RISCV64]
+  RiscV/StandaloneMmCoreHobLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
