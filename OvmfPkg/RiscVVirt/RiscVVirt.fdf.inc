@@ -31,6 +31,8 @@ DEFINE VARS_BLOCKS                  = 0x3
 DEFINE STANDALONE_MM_FW_BASE       = 0x80200000
 DEFINE STANDALONE_MM_FW_SIZE       = 0x00100000
 DEFINE STANDALONE_MM_FW_BLOCKS     = 0x100
+SET gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvBase = 0
+SET gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize = $(STANDALONE_MM_FW_SIZE)
 !endif
 
 #
@@ -48,3 +50,4 @@ DEFINE VARS_FTW_SPARE_SIZE           = 0x00040000
 SET gUefiCpuPkgTokenSpaceGuid.PcdCpuCoreCrystalClockFrequency = 10000000
 SET gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamBase = 0x83FF0000
 SET gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamSize = 0x00010000
+
