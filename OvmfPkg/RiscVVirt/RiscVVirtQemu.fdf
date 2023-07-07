@@ -78,9 +78,16 @@ INF  MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
 !else
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+    # TODO: Need change to use VariableSmmRuntimeDxe, otherwise no StandaloneMm secure variable service !
+    INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+    INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf
+    INF  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
+!else
   INF OvmfPkg/RiscVVirt/MmCommunicationDxe/MmCommunication.inf
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
   INF SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif
 !endif
 INF  MdeModulePkg/Universal/MonotonicCounterRuntimeDxe/MonotonicCounterRuntimeDxe.inf
 INF  MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
@@ -99,7 +106,7 @@ INF  MdeModulePkg/Universal/SerialDxe/SerialDxe.inf
 
 # RISC-V Core Drivers
 INF  UefiCpuPkg/CpuTimerDxeRiscV64/CpuTimerDxeRiscV64.inf
-#INF  OvmfPkg/VirtNorFlashDxe/VirtNorFlashDxe.inf
+INF  OvmfPkg/VirtNorFlashDxe/VirtNorFlashDxe.inf
 INF  MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
 
 #
@@ -216,10 +223,6 @@ INF  MdeModulePkg/Logo/LogoDxe.inf
 INF  MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
 
 #INF  MdeModulePkg/Universal/MemoryTest/NullMemoryTestDxe/NullMemoryTestDxe.inf
-
-!if $(BUILD_STANDALONE_MM) == TRUE
-INF  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
-!endif
 
 ################################################################################
 

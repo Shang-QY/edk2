@@ -23,7 +23,6 @@
   SUPPORTED_ARCHITECTURES        = RISCV64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
-  BUILD_STANDALONE_MM            = TRUE
   FLASH_DEFINITION               = OvmfPkg/RiscVVirt/RiscVVirtQemu.fdf
 
   #
@@ -37,7 +36,7 @@
   DEFINE TPM2_ENABLE             = FALSE
   DEFINE TPM2_CONFIG_ENABLE      = FALSE
   DEFINE DEBUG_ON_SERIAL_PORT    = TRUE
-  DEFINE SECURE_BOOT_ENABLE      = FALSE
+  DEFINE MM_WITH_TVM_ENABLE      = FALSE
 
   #
   # Network definition
@@ -184,6 +183,11 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdRemovableMediaImageVerificationPolicy|0x04
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferBase|0xFFE00000
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferSize|0x00200000
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0x10000000
+  # Use emulator variable for temp
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
+!endif
 !endif
 
   gEfiShellPkgTokenSpaceGuid.PcdShellFileOperationSize|0x20000
@@ -193,11 +197,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeMemorySize|1
 
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosEntryPointProvideMethod|0x2
-
-  #
-  # StandaloneMmPkg
-  #
-  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0x10000000
 
 [PcdsDynamicDefault.common]
   gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|3
@@ -240,8 +239,6 @@
   #
   gEfiNetworkPkgTokenSpaceGuid.PcdIPv4PXESupport|0x01
   gEfiNetworkPkgTokenSpaceGuid.PcdIPv6PXESupport|0x01
-
-  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
 
   #
   # TPM2 support
@@ -349,12 +346,26 @@
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
 !else
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
+  # # TODO: Need change to use VariableSmmRuntimeDxe, otherwise no StandaloneMm secure variable service !
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
+      # AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
+      # VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+      # don't use unaligned CopyMem () on the UEFI varstore NOR flash region
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
+!else
   OvmfPkg/RiscVVirt/MmCommunicationDxe/MmCommunication.inf {
    <LibraryClasses>
       NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
   }
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
   # SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif  
 !endif
 
   MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
@@ -532,7 +543,3 @@
     <LibraryClasses>
       NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   }
-
-!if $(BUILD_STANDALONE_MM) == TRUE
-  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
-!endif
