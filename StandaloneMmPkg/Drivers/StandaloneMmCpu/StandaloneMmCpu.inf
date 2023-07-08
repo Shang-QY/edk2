@@ -26,7 +26,6 @@
 
 [Sources]
   StandaloneMmCpu.c
-  StandaloneMmCpu.h
   EventHandle.c
 
 [Packages]
@@ -44,6 +43,7 @@
   StandaloneMmDriverEntryPoint
 
 [LibraryClasses.RISCV64]
+  CpuLib
   BaseMemoryLib
   DebugLib
   HobLib
@@ -59,7 +59,7 @@
   gZeroGuid
   gMpInformationHobGuid
   gEfiStandaloneMmNonSecureBufferGuid
-  gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiMmCpuDriverEpDescriptorGuid
 
 [Depex]
   TRUE

@@ -10,7 +10,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <PiMm.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
 
 #include <PiPei.h>
 #include <Guid/MmramMemoryReserve.h>
@@ -23,6 +22,16 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
 
+#include <Library/StandaloneMmCoreEntryPoint.h>
+#include <Library/DebugLib.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseRiscVTeeLib.h>
+//
+// Cache copy of HobList pointer.
+//
+VOID  *gHobList = NULL;
+
+#if 0
 #define BOOT_PAYLOAD_VERSION  1
 
 PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
@@ -93,8 +102,37 @@ GetAndPrintBootinformation (
   }
   return PayloadBootInfo;
 }
+#endif
 
+VOID
+EFIAPI
+CModuleEntryPoint (
+  IN VOID  *HobStart
+  )
+{
+  //
+  // Register shared memory
+  //
+  DEBUG ((DEBUG_INFO, "##### CModuleEntryPoint Debug 1#####       - \n"));
+  SbiTeeGuestShareMemoryRegion (0x80000000, 0x100000);
+  DEBUG ((DEBUG_INFO, "##### CModuleEntryPoint Debug 2#####       - \n"));
+  
+    //
+  // Cache a pointer to the HobList
+  //
+  gHobList = HobStart;
 
+  //
+  // Call the Standalone MM Core entry point
+  //
+  ProcessModuleEntryPointList (HobStart);
+
+  //
+  // TODO: Set page table here?? AARCH64 has this step for some reason
+  //
+}
+
+#if 0
 /**
   The entry point of Standalone MM Foundation.
 
@@ -184,3 +222,18 @@ finish:
     Ret = 0;
   }
 }
+#endif
+
+#if 0
+VOID
+EFIAPI
+EfiMain (
+  IN VOID  *HobStart
+  )
+{
+  DEBUG ((DEBUG_INFO, "EfiMain #####       - \n"));
+  _ModuleEntryPoint (HobStart);
+  DEBUG ((DEBUG_INFO, "EfiMain END #####       - \n"));
+}
+#endif
+

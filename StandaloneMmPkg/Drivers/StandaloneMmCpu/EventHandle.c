@@ -33,7 +33,7 @@
   #include <IndustryStandard/ArmStdSmc.h>
 #endif
 
-#include "StandaloneMmCpu.h"
+#include <Library/StandaloneMmCpu.h>
 
 EFI_STATUS
 EFIAPI
@@ -116,7 +116,7 @@ CheckBufferAddr (
 }
 
 /**
-  The PI Standalone MM entry point for the TF-A CPU driver.
+  The PI Standalone MM entry point for the CPU driver.
 
   @param  [in] EventId            The event Id.
   @param  [in] CpuNumber          The CPU number.
@@ -129,7 +129,7 @@ CheckBufferAddr (
   @retval   EFI_UNSUPPORTED         Operation not supported.
 **/
 EFI_STATUS
-PiMmStandaloneArmTfCpuDriverEntry (
+PiMmStandaloneMmCpuDriverEntry (
   IN UINTN  EventId,
   IN UINTN  CpuNumber,
   IN UINTN  NsCommBufferAddr
