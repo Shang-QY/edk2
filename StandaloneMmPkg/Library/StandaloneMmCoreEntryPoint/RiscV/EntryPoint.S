@@ -9,15 +9,15 @@
 .align 3
 
 #include <Register/RiscV64/RiscVImpl.h>
+#include <Library/RiscV/StandaloneMmCoreEntryPoint.h>
 
 ASM_FUNC (_ModuleEntryPoint)
   /*
    * a0: ID
-   * a1: HOB address
-   * sp: a1 + 0x100000
+   * a1: Boot info address
    */
   
-  li    a2, 0x100000
-  add   sp, a1, a2
-  mv    a0, a1
+  li    a2, BOOT_INFO_STACK_BASE_OFFSET
+  add   a2, a1, a2
+  ld    sp, 0(a2)
   call  CModuleEntryPoint

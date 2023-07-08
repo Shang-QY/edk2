@@ -27,18 +27,13 @@
   Arm/SetPermissions.c
   Arm/CreateHobList.c
 
-[Sources.RISCV64]
-   RiscV64/StandaloneMmCoreEntryPoint.c
-   # Arm/SetPermissions.c
-   # Arm/CreateHobList.c
-   RiscV/EntryPoint.S
-
 [Sources.X64]
   X64/StandaloneMmCoreEntryPoint.c
 
-# [Sources.RISCV64]
-#  RiscV/Core.c
-#  RiscV/EntryPoint.S
+[Sources.RISCV64]
+  RiscV/CreateHobList.c
+  RiscV/EntryPoint.S
+  RiscV/StandaloneMmCoreEntryPoint.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -51,6 +46,7 @@
 [LibraryClasses]
   BaseLib
   DebugLib
+  CpuLib
 
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   StandaloneMmMmuLib
@@ -64,7 +60,7 @@
   gMpInformationHobGuid
   gEfiMmPeiMmramMemoryReserveGuid
   gEfiStandaloneMmNonSecureBufferGuid
-  gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiMmCpuDriverEpDescriptorGuid
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable
