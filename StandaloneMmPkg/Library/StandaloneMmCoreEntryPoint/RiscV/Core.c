@@ -43,7 +43,7 @@ CModuleEntryPoint (
   // Register shared memory
   //
   SbiTeeGuestShareMemoryRegion (0x80000000, 0x100000);
-
+  DEBUG ((DEBUG_INFO, "CModuleEntryPoint #####       - \n"));
   //
   // Cache a pointer to the HobList
   //
@@ -73,5 +73,6 @@ EfiMain (
   IN VOID  *HobStart
   )
 {
+  DEBUG ((DEBUG_INFO, "EfiMain #####       - \n"));
   _ModuleEntryPoint (HobStart);
 }

@@ -11,28 +11,17 @@
 #include <Base.h>
 #include <Pi/PiMmCis.h>
 
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  #include <Library/ArmSvcLib.h>
-  #include <Library/ArmLib.h>
-#elif defined (MDE_CPU_RISCV64)
-  #include <Library/BaseRiscVSbiLib.h>
-#else
-  #error Unsupported Processor Type
-#endif
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
-#include <Library/CpuLib.h>
 
 #include <Protocol/DebugSupport.h> // for EFI_SYSTEM_CONTEXT
 
 #include <Guid/ZeroGuid.h>
 #include <Guid/MmramMemoryReserve.h>
 
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  #include <IndustryStandard/ArmFfaSvc.h>
-  #include <IndustryStandard/ArmStdSmc.h>
-#endif
+#include <IndustryStandard/ArmFfaSvc.h>
+#include <IndustryStandard/ArmStdSmc.h>
 
 #include "StandaloneMmCpu.h"
 
@@ -58,7 +47,6 @@ EFI_MM_COMMUNICATE_HEADER  **PerCpuGuidedEventContext = NULL;
 
 // Descriptor with whereabouts of memory used for communication with the normal world
 EFI_MMRAM_DESCRIPTOR  mNsCommBuffer;
-EFI_MMRAM_DESCRIPTOR  mSCommBuffer;
 
 MP_INFORMATION_HOB_DATA  *mMpInformationHobData;
 
@@ -77,7 +65,6 @@ STATIC EFI_MM_ENTRY_POINT  mMmEntryPoint = NULL;
   @retval   EFI_SUCCESS             Success.
   @retval   EFI_ACCESS_DENIED       Access not permitted.
 **/
-__attribute__ ((unused))
 STATIC
 EFI_STATUS
 CheckBufferAddr (
@@ -85,20 +72,14 @@ CheckBufferAddr (
   )
 {
   UINT64  NsCommBufferEnd;
-  UINT64  SCommBufferEnd;
   UINT64  CommBufferEnd;
 
   NsCommBufferEnd = mNsCommBuffer.PhysicalStart + mNsCommBuffer.PhysicalSize;
-  SCommBufferEnd  = mSCommBuffer.PhysicalStart + mSCommBuffer.PhysicalSize;
 
   if ((BufferAddr >= mNsCommBuffer.PhysicalStart) &&
       (BufferAddr < NsCommBufferEnd))
   {
     CommBufferEnd = NsCommBufferEnd;
-  } else if ((BufferAddr >= mSCommBuffer.PhysicalStart) &&
-             (BufferAddr < SCommBufferEnd))
-  {
-    CommBufferEnd = SCommBufferEnd;
   } else {
     return EFI_ACCESS_DENIED;
   }
@@ -118,7 +99,7 @@ CheckBufferAddr (
 }
 
 /**
-  The PI Standalone MM entry point for the TF-A CPU driver.
+  The PI Standalone MM entry point for the CPU driver.
 
   @param  [in] EventId            The event Id.
   @param  [in] CpuNumber          The CPU number.
@@ -131,13 +112,12 @@ CheckBufferAddr (
   @retval   EFI_UNSUPPORTED         Operation not supported.
 **/
 EFI_STATUS
-PiMmStandaloneArmTfCpuDriverEntry (
+PiMmStandaloneMmCpuDriverEntry (
   IN UINTN  EventId,
   IN UINTN  CpuNumber,
   IN UINTN  NsCommBufferAddr
   )
 {
-#if defined(MDE_CPU_AARCH64) || defined(MDE_CPU_ARM)
   EFI_MM_COMMUNICATE_HEADER  *GuidedEventContext;
   EFI_MM_ENTRY_CONTEXT       MmEntryPointContext;
   EFI_STATUS                 Status;
@@ -146,21 +126,6 @@ PiMmStandaloneArmTfCpuDriverEntry (
   DEBUG ((DEBUG_INFO, "Received event - 0x%x on cpu %d\n", EventId, CpuNumber));
 
   Status = EFI_SUCCESS;
-  //
-  // ARM TF passes SMC FID of the MM_COMMUNICATE interface as the Event ID upon
-  // receipt of a synchronous MM request. Use the Event ID to distinguish
-  // between synchronous and asynchronous events.
-  //
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  if ((ARM_SMC_ID_MM_COMMUNICATE != EventId) &&
-      (ARM_SVC_ID_FFA_MSG_SEND_DIRECT_REQ != EventId))
-#elif defined (MDE_CPU_RISCV64)
-  if (SBI_COVE_SMM_COMMUNICATE != EventId)
-#endif
-  {
-    DEBUG ((DEBUG_ERROR, "UnRecognized Event - 0x%x\n", EventId));
-    return EFI_INVALID_PARAMETER;
-  }
 
   // Perform parameter validation of NsCommBufferAddr
   if (NsCommBufferAddr == (UINTN)NULL) {
@@ -191,8 +156,6 @@ PiMmStandaloneArmTfCpuDriverEntry (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  // X1 contains the VA of the normal world memory accessible from
-  // S-EL0
   CopyMem (GuidedEventContext, (CONST VOID *)NsCommBufferAddr, NsCommBufferSize);
 
   // Stash the pointer to the allocated Event Context for this CPU
@@ -226,101 +189,6 @@ PiMmStandaloneArmTfCpuDriverEntry (
   }
 
   PerCpuGuidedEventContext[CpuNumber] = NULL;
-
-  return Status;
-#else
-  return EFI_INVALID_PARAMETER;
-#endif
-}
-
-/**
-  The PI Standalone MM loop to receive request from normal world
-
-  @param  [in] EventId            The event Id.
-  @param  [in] CpuNumber          The CPU number.
-  @param  [in] NsCommBufferAddr   Address of the NS common buffer.
-
-  @retval   EFI_SUCCESS             Success.
-  @retval   EFI_INVALID_PARAMETER   A parameter was invalid.
-  @retval   EFI_ACCESS_DENIED       Access not permitted.
-  @retval   EFI_OUT_OF_RESOURCES    Out of resources.
-  @retval   EFI_UNSUPPORTED         Operation not supported.
-**/
-EFI_STATUS
-PiMmStandaloneRequestLoop (
-  VOID
-  )
-{
-  EFI_MM_COMMUNICATE_HEADER  *GuidedEventContext;
-  EFI_MM_ENTRY_CONTEXT       MmEntryPointContext;
-  UINTN                      NsCommBufferSize, NsCommBufferAddr;
-  EFI_STATUS                 Status;
-
-  NsCommBufferAddr = mNsCommBuffer.PhysicalStart + sizeof (EFI_MMRAM_DESCRIPTOR);
-  // Make sure MessageLength is zero before enter the loop
-  if (((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength != 0) {
-    DEBUG ((DEBUG_ERROR, "MessageLength not zero\n"));
-    return EFI_INVALID_PARAMETER;
-  }
-  
-  while (TRUE) {
-    CpuSleep ();
-    DEBUG ((DEBUG_VERBOSE, "%a: MessageLength:%d\n", __FUNCTION__, ((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength));
-    if (((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength == 0) {
-      continue;
-    }
-    // Find out the size of the buffer passed
-    NsCommBufferSize = ((EFI_MM_COMMUNICATE_HEADER *)NsCommBufferAddr)->MessageLength +
-                     sizeof (EFI_MM_COMMUNICATE_HEADER);
-
-    GuidedEventContext = NULL;
-    // Now that the secure world can see the normal world buffer, allocate
-    // memory to copy the communication buffer to the secure world.
-    Status = mMmst->MmAllocatePool (
-                      EfiRuntimeServicesData,
-                      NsCommBufferSize,
-                      (VOID **)&GuidedEventContext
-                      );
-
-    if (Status != EFI_SUCCESS) {
-      DEBUG ((DEBUG_ERROR, "%a: Mem alloc failed\n", __FUNCTION__));
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    CopyMem (GuidedEventContext, (CONST VOID *)NsCommBufferAddr, NsCommBufferSize);
-
-    // Stash the pointer to the allocated Event Context for this CPU
-    PerCpuGuidedEventContext[0] = GuidedEventContext;
-
-    ZeroMem (&MmEntryPointContext, sizeof (EFI_MM_ENTRY_CONTEXT));
-
-    MmEntryPointContext.CurrentlyExecutingCpu = 0;
-    MmEntryPointContext.NumberOfCpus          = mMpInformationHobData->NumberOfProcessors;
-
-    // Populate the MM system table with MP and state information
-    mMmst->CurrentlyExecutingCpu = 0;
-    mMmst->NumberOfCpus          = mMpInformationHobData->NumberOfProcessors;
-    mMmst->CpuSaveStateSize      = 0;
-    mMmst->CpuSaveState          = NULL;
-
-    if (mMmEntryPoint == NULL) {
-      DEBUG ((DEBUG_ERROR, "Mm Entry point Not Found\n"));
-      return EFI_UNSUPPORTED;
-    }
-
-    mMmEntryPoint (&MmEntryPointContext);
-
-    // Free the memory allocation done earlier and reset the per-cpu context
-    ASSERT (GuidedEventContext);
-    CopyMem ((VOID *)NsCommBufferAddr, (CONST VOID *)GuidedEventContext, NsCommBufferSize);
-
-    Status = mMmst->MmFreePool ((VOID *)GuidedEventContext);
-    if (Status != EFI_SUCCESS) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    PerCpuGuidedEventContext[0] = NULL;
-  }
 
   return Status;
 }

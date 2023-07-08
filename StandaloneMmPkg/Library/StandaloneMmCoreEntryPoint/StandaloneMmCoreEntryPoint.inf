@@ -27,17 +27,18 @@
   Arm/SetPermissions.c
   Arm/CreateHobList.c
 
-# [Sources.RISCV64]
-#   RiscV64/StandaloneMmCoreEntryPoint.c
-#   Arm/SetPermissions.c
-#   Arm/CreateHobList.c
+[Sources.RISCV64]
+   RiscV64/StandaloneMmCoreEntryPoint.c
+   # Arm/SetPermissions.c
+   # Arm/CreateHobList.c
+   RiscV/EntryPoint.S
 
 [Sources.X64]
   X64/StandaloneMmCoreEntryPoint.c
 
-[Sources.RISCV64]
-  RiscV/Core.c
-  RiscV/EntryPoint.S
+# [Sources.RISCV64]
+#  RiscV/Core.c
+#  RiscV/EntryPoint.S
 
 [Packages]
   MdePkg/MdePkg.dec
