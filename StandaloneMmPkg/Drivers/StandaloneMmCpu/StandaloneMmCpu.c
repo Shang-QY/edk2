@@ -4,6 +4,7 @@
   Copyright (c) 2016 HP Development Company, L.P.
   Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.
   Copyright (c) 2023, Intel Corporation. All rights reserved.
+  Copyright (c) 2023, Ventana Micro System Inc. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,12 +12,13 @@
 
 #include <Base.h>
 #include <Pi/PiMmCis.h>
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
 #include <Library/DebugLib.h>
 #if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
+  #include <Library/Arm/StandaloneMmCoreEntryPoint.h>
   #include <Library/ArmSvcLib.h>
   #include <Library/ArmLib.h>
 #elif defined (MDE_CPU_RISCV64)
+  #include <Library/RiscV64/StandaloneMmCoreEntryPoint.h>
   #include <Library/BaseRiscVSbiLib.h>
 #else
   #error Unsupported Processor Type
@@ -29,7 +31,7 @@
 #include <Guid/ZeroGuid.h>
 #include <Guid/MmramMemoryReserve.h>
 
-#include "StandaloneMmCpu.h"
+#include <Library/StandaloneMmCpu.h>
 
 // GUID to identify HOB with whereabouts of communication buffer with Normal
 // World
@@ -38,7 +40,7 @@ extern EFI_GUID  gEfiStandaloneMmNonSecureBufferGuid;
 // GUID to identify HOB where the entry point of this CPU driver will be
 // populated to allow the entry point driver to invoke it upon receipt of an
 // event
-extern EFI_GUID  gEfiArmTfCpuDriverEpDescriptorGuid;
+extern EFI_GUID  gEfiMmCpuDriverEpDescriptorGuid;
 
 //
 // Private copy of the MM system table for future use
@@ -103,7 +105,7 @@ StandaloneMmCpuInitialize (
   IN EFI_MM_SYSTEM_TABLE  *SystemTable   // not actual systemtable
   )
 {
-  ARM_TF_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
+  MM_CPU_DRIVER_EP_DESCRIPTOR  *CpuDriverEntryPointDesc;
   EFI_CONFIGURATION_TABLE          *ConfigurationTable;
   MP_INFORMATION_HOB_DATA          *MpInformationHobData;
   EFI_MMRAM_DESCRIPTOR             *NsCommBufMmramRange;
@@ -161,11 +163,11 @@ StandaloneMmCpuInitialize (
   //
   Status = GetGuidedHobData (
              HobStart,
-             &gEfiArmTfCpuDriverEpDescriptorGuid,
+             &gEfiMmCpuDriverEpDescriptorGuid,
              (VOID **)&CpuDriverEntryPointDesc
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "ArmTfCpuDriverEpDesc HOB data extraction failed - 0x%x\n", Status));
+    DEBUG ((DEBUG_ERROR, "MmCpuDriverEpDesc HOB data extraction failed - 0x%x\n", Status));
     return Status;
   }
 
@@ -173,10 +175,10 @@ StandaloneMmCpuInitialize (
   DEBUG ((
     DEBUG_INFO,
     "Sharing Cpu Driver EP *0x%lx = 0x%lx\n",
-    (UINTN)CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr,
-    (UINTN)PiMmStandaloneArmTfCpuDriverEntry
+    (UINTN)CpuDriverEntryPointDesc->MmCpuDriverEpPtr,
+    (UINTN)PiMmStandaloneMmCpuDriverEntry
     ));
-  *(CpuDriverEntryPointDesc->ArmTfCpuDriverEpPtr) = PiMmStandaloneArmTfCpuDriverEntry;
+  *(CpuDriverEntryPointDesc->MmCpuDriverEpPtr) = PiMmStandaloneMmCpuDriverEntry;
 
   // Find the descriptor that contains the whereabouts of the buffer for
   // communication with the Normal world.

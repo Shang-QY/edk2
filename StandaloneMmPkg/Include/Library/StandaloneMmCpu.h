@@ -7,8 +7,8 @@
 
 **/
 
-#ifndef _ARM_TF_CPU_DRIVER_H_
-#define _ARM_TF_CPU_DRIVER_H_
+#ifndef MM_CPU_DRIVER_H_
+#define MM_CPU_DRIVER_H_
 
 #include <Protocol/MmCommunication2.h>
 #include <Protocol/MmConfiguration.h>
@@ -35,7 +35,7 @@ extern MP_INFORMATION_HOB_DATA        *mMpInformationHobData;
 extern EFI_MM_CONFIGURATION_PROTOCOL  mMmConfig;
 
 /**
-  The PI Standalone MM entry point for the TF-A CPU driver.
+  The PI Standalone MM entry point for the CPU driver.
 
   @param  [in] EventId            The event Id.
   @param  [in] CpuNumber          The CPU number.
@@ -48,7 +48,7 @@ extern EFI_MM_CONFIGURATION_PROTOCOL  mMmConfig;
   @retval   EFI_UNSUPPORTED         Operation not supported.
 **/
 EFI_STATUS
-PiMmStandaloneArmTfCpuDriverEntry (
+PiMmStandaloneMmCpuDriverEntry (
   IN UINTN  EventId,
   IN UINTN  CpuNumber,
   IN UINTN  NsCommBufferAddr
@@ -79,4 +79,4 @@ PiMmCpuTpFwRootMmiHandler (
   IN OUT UINTN       *CommBufferSize  OPTIONAL
   );
 
-#endif
+#endif /* MM_CPU_DRIVER_H_ */

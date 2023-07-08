@@ -29,8 +29,8 @@
 
 [Sources.RISCV64]
   RiscV64/StandaloneMmCoreEntryPoint.c
-  Arm/SetPermissions.c
-  Arm/CreateHobList.c
+  RiscV64/SetPermissions.c
+  RiscV64/CreateHobList.c
 
 [Sources.X64]
   X64/StandaloneMmCoreEntryPoint.c
@@ -55,7 +55,7 @@
   gMpInformationHobGuid
   gEfiMmPeiMmramMemoryReserveGuid
   gEfiStandaloneMmNonSecureBufferGuid
-  gEfiArmTfCpuDriverEpDescriptorGuid
+  gEfiMmCpuDriverEpDescriptorGuid
 
 [FeaturePcd.ARM, FeaturePcd.AARCH64]
   gArmTokenSpaceGuid.PcdFfaEnable
