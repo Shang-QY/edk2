@@ -41,7 +41,7 @@ STATIC CONST UINT32  mSpmMinorVerFfa = SPM_MINOR_VERSION_FFA;
 
 #define BOOT_PAYLOAD_VERSION  1
 
-PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
+PI_MM_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
 /**
   Retrieve a pointer to and print the boot information passed by privileged

@@ -10,7 +10,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <PiMm.h>
 
-#include <Library/Arm/StandaloneMmCoreEntryPoint.h>
+#include <Library/StandaloneMmCpu.h>
+#include <Library/RiscV64/StandaloneMmCoreEntryPoint.h>
 
 #include <PiPei.h>
 #include <Guid/MmramMemoryReserve.h>
@@ -23,9 +24,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/SerialPortLib.h>
 #include <Library/PcdLib.h>
 
+
 #define BOOT_PAYLOAD_VERSION  1
 
-PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
+PI_MM_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
 /**
   Retrieve a pointer to and print the boot information passed by privileged
@@ -35,16 +37,16 @@ PI_MM_ARM_TF_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
                                   firmware.
 
 **/
-EFI_SECURE_PARTITION_BOOT_INFO *
+EFI_RISCV_MM_BOOT_INFO *
 GetAndPrintBootinformation (
-  IN VOID  *SharedBufAddress
+  IN VOID  *BootInfoAddress
   )
 {
-  EFI_SECURE_PARTITION_BOOT_INFO  *PayloadBootInfo;
-  EFI_SECURE_PARTITION_CPU_INFO   *PayloadCpuInfo;
-  UINTN                           Index;
+  EFI_RISCV_MM_BOOT_INFO        *PayloadBootInfo;
+  EFI_RISCV_MM_CPU_INFO         *PayloadCpuInfo;
+  UINTN                         Index;
 
-  PayloadBootInfo = (EFI_SECURE_PARTITION_BOOT_INFO *)SharedBufAddress;
+  PayloadBootInfo = (EFI_RISCV_MM_BOOT_INFO *)BootInfoAddress;
 
   if (PayloadBootInfo == NULL) {
     DEBUG ((DEBUG_ERROR, "PayloadBootInfo NULL\n"));
@@ -61,39 +63,32 @@ GetAndPrintBootinformation (
     return NULL;
   }
 
-  DEBUG ((DEBUG_INFO, "NumSpMemRegions - 0x%x\n", PayloadBootInfo->NumSpMemRegions));
-  DEBUG ((DEBUG_INFO, "SpMemBase       - 0x%lx\n", PayloadBootInfo->SpMemBase));
-  DEBUG ((DEBUG_INFO, "SpMemLimit      - 0x%lx\n", PayloadBootInfo->SpMemLimit));
-  DEBUG ((DEBUG_INFO, "SpImageBase     - 0x%lx\n", PayloadBootInfo->SpImageBase));
-  DEBUG ((DEBUG_INFO, "SpStackBase     - 0x%lx\n", PayloadBootInfo->SpStackBase));
-  DEBUG ((DEBUG_INFO, "SpHeapBase      - 0x%lx\n", PayloadBootInfo->SpHeapBase));
-  DEBUG ((DEBUG_INFO, "SpNsCommBufBase - 0x%lx\n", PayloadBootInfo->SpNsCommBufBase));
-  DEBUG ((DEBUG_INFO, "SpSharedBufBase - 0x%lx\n", PayloadBootInfo->SpSharedBufBase));
+  DEBUG ((DEBUG_INFO, "NumMmMemRegions - 0x%x\n", PayloadBootInfo->NumMmMemRegions));
+  DEBUG ((DEBUG_INFO, "MmMemBase       - 0x%lx\n", PayloadBootInfo->MmMemBase));
+  DEBUG ((DEBUG_INFO, "MmMemLimit      - 0x%lx\n", PayloadBootInfo->MmMemLimit));
+  DEBUG ((DEBUG_INFO, "MmImageBase     - 0x%lx\n", PayloadBootInfo->MmImageBase));
+  DEBUG ((DEBUG_INFO, "MmStackBase     - 0x%lx\n", PayloadBootInfo->MmStackBase));
+  DEBUG ((DEBUG_INFO, "MmHeapBase      - 0x%lx\n", PayloadBootInfo->MmHeapBase));
+  DEBUG ((DEBUG_INFO, "MmNsCommBufBase - 0x%lx\n", PayloadBootInfo->MmNsCommBufBase));
+  DEBUG ((DEBUG_INFO, "MmSharedBufBase - 0x%lx\n", PayloadBootInfo->MmSharedBufBase));
 
-  DEBUG ((DEBUG_INFO, "SpImageSize     - 0x%x\n", PayloadBootInfo->SpImageSize));
-  DEBUG ((DEBUG_INFO, "SpPcpuStackSize - 0x%x\n", PayloadBootInfo->SpPcpuStackSize));
-  DEBUG ((DEBUG_INFO, "SpHeapSize      - 0x%x\n", PayloadBootInfo->SpHeapSize));
-  DEBUG ((DEBUG_INFO, "SpNsCommBufSize - 0x%x\n", PayloadBootInfo->SpNsCommBufSize));
-  DEBUG ((DEBUG_INFO, "SpSharedBufSize - 0x%x\n", PayloadBootInfo->SpSharedBufSize));
+  DEBUG ((DEBUG_INFO, "MmImageSize     - 0x%x\n", PayloadBootInfo->MmImageSize));
+  DEBUG ((DEBUG_INFO, "MmPcpuStackSize - 0x%x\n", PayloadBootInfo->MmPcpuStackSize));
+  DEBUG ((DEBUG_INFO, "MmHeapSize      - 0x%x\n", PayloadBootInfo->MmHeapSize));
+  DEBUG ((DEBUG_INFO, "MmNsCommBufSize - 0x%x\n", PayloadBootInfo->MmNsCommBufSize));
+  DEBUG ((DEBUG_INFO, "MmSharedBufSize - 0x%x\n", PayloadBootInfo->MmSharedBufSize));
 
   DEBUG ((DEBUG_INFO, "NumCpus         - 0x%x\n", PayloadBootInfo->NumCpus));
-  DEBUG ((DEBUG_INFO, "CpuInfo         - 0x%p\n", PayloadBootInfo->CpuInfo));
 
-  PayloadCpuInfo = (EFI_SECURE_PARTITION_CPU_INFO *)PayloadBootInfo->CpuInfo;
-
-  if (PayloadCpuInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "PayloadCpuInfo NULL\n"));
-    return NULL;
-  }
+  PayloadCpuInfo = (EFI_RISCV_MM_CPU_INFO *)&(PayloadBootInfo->CpuInfo);
 
   for (Index = 0; Index < PayloadBootInfo->NumCpus; Index++) {
-    DEBUG ((DEBUG_INFO, "Mpidr           - 0x%lx\n", PayloadCpuInfo[Index].Mpidr));
-    DEBUG ((DEBUG_INFO, "LinearId        - 0x%x\n", PayloadCpuInfo[Index].LinearId));
-    DEBUG ((DEBUG_INFO, "Flags           - 0x%x\n", PayloadCpuInfo[Index].Flags));
+    DEBUG ((DEBUG_INFO, "ProcessorId        - 0x%lx\n", PayloadCpuInfo[Index].ProcessorId));
+    DEBUG ((DEBUG_INFO, "Package            - 0x%x\n", PayloadCpuInfo[Index].Package));
+    DEBUG ((DEBUG_INFO, "Core               - 0x%x\n", PayloadCpuInfo[Index].Core));
   }
   return PayloadBootInfo;
 }
-
 
 /**
   The entry point of Standalone MM Foundation.
@@ -114,7 +109,7 @@ _ModuleEntryPoint (
   )
 {
   PE_COFF_LOADER_IMAGE_CONTEXT    ImageContext;
-  EFI_SECURE_PARTITION_BOOT_INFO  *PayloadBootInfo;
+  EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
   EFI_STATUS                      Status;
   INT32                           Ret;
   UINT32                          SectionHeaderOffset;
@@ -130,7 +125,7 @@ _ModuleEntryPoint (
   }
   // Locate PE/COFF File information for the Standalone MM core module
   Status = LocateStandaloneMmCorePeCoffData (
-             (EFI_FIRMWARE_VOLUME_HEADER *)(UINTN)PayloadBootInfo->SpImageBase,
+             (EFI_FIRMWARE_VOLUME_HEADER *)(UINTN)PayloadBootInfo->MmImageBase,
              &TeData,
              &TeDataSize
              );
