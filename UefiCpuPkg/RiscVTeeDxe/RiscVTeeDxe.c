@@ -9,11 +9,6 @@
 
 #include "RiscVTeeDxe.h"
 
-#define RISCV_TEE_MM_SHARED_BASE    0x80000000
-#define RISCV_TEE_MM_SHARED_SIZE    0x100000
-#define RISCV_TEE_TVM_GUEST_ID      2
-#define RISCV_TEE_VCPU              0
-
 #define EXT_TEE_GUEST               0x54454547
 #define EXT_NACL                    0x4E41434C
 #define EXT_PUT_CHAR                0x1
@@ -21,41 +16,39 @@
 #define NACL_SCRATCH_BYTES          2048
 #define NACL_PFN_SHIFT              12
 
-#define MAX_SHARED_MEM_PAGE         256
-
 typedef struct {
-    /// Scratch space. The layout of this scratch space is defined by the particular function being
-    /// invoked.
-    ///
-    /// For the `TvmCpuRun` function in the TEE-Host extension, the layout of this scratch space
-    /// matches the `TsmShmemScratch` struct.
+  /// Scratch space. The layout of this scratch space is defined by the particular function being
+  /// invoked.
+  ///
+  /// For the `TvmCpuRun` function in the TEE-Host extension, the layout of this scratch space
+  /// matches the `TsmShmemScratch` struct.
   UINT64 Scratch[NACL_SCRATCH_BYTES / 8];
   UINT64 _Reserved[240];
-    /// Bitmap indicating which CSRs in `csrs` the host wishes to sync.
-    ///
-    /// Currently unused in the TEE-related extensions and will not be read or written by the TSM.
+  /// Bitmap indicating which CSRs in `csrs` the host wishes to sync.
+  ///
+  /// Currently unused in the TEE-related extensions and will not be read or written by the TSM.
   UINT64 DirtyBitmap[16];
-    /// Hypervisor and virtual-supervisor CSRs. The 12-bit CSR number is transformed into a 10-bit
-    /// index by extracting bits `{csr[11:10], csr[8:0]}` since `csr[9:8]` is always 2'b10 for HS
-    /// and VS CSRs.
-    ///
-    /// These CSRs may be updated by `TvmCpuRun` in the TEE-Host extension. See the documentation
-    /// of `TvmCpuRun` for more detials.
+  /// Hypervisor and virtual-supervisor CSRs. The 12-bit CSR number is transformed into a 10-bit
+  /// index by extracting bits `{csr[11:10], csr[8:0]}` since `csr[9:8]` is always 2'b10 for HS
+  /// and VS CSRs.
+  ///
+  /// These CSRs may be updated by `TvmCpuRun` in the TEE-Host extension. See the documentation
+  /// of `TvmCpuRun` for more detials.
   UINT64 Csrs[1024];
 } NACL_SHMEM_T;
 
 typedef struct {
-    /// General purpose registers for a TVM guest.
-    ///
-    /// The TSM will always read or write the minimum number of registers in this set to complete
-    /// the requested action, in order to avoid leaking information from the TVM.
-    ///
-    /// The TSM will write to these registers upon return from `TvmCpuRun` when:
-    ///  - The vCPU takes a store guest page fault in an emulated MMIO region.
-    ///  - The vCPU makes an ECALL that is to be forwarded to the host.
-    ///
-    /// The TSM will read from these registers when:
-    ///  - The vCPU takes a load guest page fault in an emulated MMIO region.
+  /// General purpose registers for a TVM guest.
+  ///
+  /// The TSM will always read or write the minimum number of registers in this set to complete
+  /// the requested action, in order to avoid leaking information from the TVM.
+  ///
+  /// The TSM will write to these registers upon return from `TvmCpuRun` when:
+  ///  - The vCPU takes a store guest page fault in an emulated MMIO region.
+  ///  - The vCPU makes an ECALL that is to be forwarded to the host.
+  ///
+  /// The TSM will read from these registers when:
+  ///  - The vCPU takes a load guest page fault in an emulated MMIO region.
     UINT64 GuestGprs[32];
     UINT64 _Reserved[224];
 } TSM_SHMEM_SCRATCH;
@@ -63,6 +56,7 @@ typedef struct {
 #define NACL_CSR_IDX(CsrNum)      ((((CsrNum) & 0xc00) >> 2) | ((CsrNum) & 0xff))
 
 STATIC NACL_SHMEM_T                 *ShmemPtr = NULL;
+STATIC UINT64                       mTvmGuestId;
 STATIC BOOLEAN                      mTvmRunBlock;
 STATIC UINT64                       mGuestSharedMemoryBase;
 STATIC UINT64                       mGuestSharedMemorySize;
@@ -73,10 +67,8 @@ STATIC
 BOOLEAN
 RiscVTeeMmioRegionCheck (IN UINT64 Address, IN UINT64 Len)
 {
-  if (Address >= 0x10000000 && (Address + Len) <= 0x10001000) {
-    return TRUE;
-  }
-  return FALSE;
+  /* Check if Mmio request from TVM valid */
+  return TRUE;
 }
 
 EFI_STATUS
@@ -105,12 +97,14 @@ RiscVTeeHandleGuestRequest (IN UINT64 *ARegs)
               mGuestSharedMemoryBase, mHostSharedMemoryBase));
       Status = EFI_ALREADY_STARTED;
     }
-    if (mGuestSharedMemorySize > RISCV_TEE_MM_SHARED_SIZE) {
+    if (mGuestSharedMemorySize > MM_VM_RAM_MM_SHARED_BUF_SIZE) {
       DEBUG ((DEBUG_ERROR, "%a: Size too big %llX, max: %llX\n", __func__,
-              mGuestSharedMemorySize, RISCV_TEE_MM_SHARED_SIZE));
+              mGuestSharedMemorySize, MM_VM_RAM_MM_SHARED_BUF_SIZE));
     }
     break;
   case 3://UnshareMemory
+    // Not expecting guest to un-share memory
+    ASSERT (FALSE);
     break;
   default:
     DEBUG ((DEBUG_ERROR, "%a: Unhandled guest request: %llX\n", __func__,
@@ -119,10 +113,10 @@ RiscVTeeHandleGuestRequest (IN UINT64 *ARegs)
     break;
   }
   if (mTvmRunBlock) {
-    Ret = SbiTeeHostRunTvmVcpu (RISCV_TEE_TVM_GUEST_ID, RISCV_TEE_VCPU);
+    Ret = SbiTeeHostRunTvmVcpu (mTvmGuestId, RISCV_TEE_VCPU_ID);
     ASSERT (Ret.Error == SBI_TEE_SUCCESS);
     mTvmRunBlock = Ret.Value;
-    SbiTeeHostTvmFence (RISCV_TEE_TVM_GUEST_ID);
+    SbiTeeHostTvmFence (mTvmGuestId);
   }
 
   return Status;
@@ -272,16 +266,17 @@ RiscVTeeException (
   if (InterruptType == EXCEPT_RISCV_LOAD_GUEST_PAGE_FAULT ||
       InterruptType == EXCEPT_RISCV_STORE_GUEST_PAGE_FAULT) {
     FaultAddr = (MmioRead64 ((UINT64)(&ShmemPtr->Csrs[NACL_CSR_IDX(CSR_HTVAL)])) << 2) | (RiscVGetStvalRegister () & 0x3);
-    if (FaultAddr >= RISCV_TEE_MM_SHARED_BASE &&
-      FaultAddr < (RISCV_TEE_MM_SHARED_BASE + RISCV_TEE_MM_SHARED_SIZE)) {
+    if (FaultAddr >= (MM_VM_RAM_BASE + MM_VM_RAM_MM_SHARED_BUF_OFFSET) &&
+      FaultAddr < (MM_VM_RAM_BASE + MM_VM_RAM_MM_SHARED_BUF_OFFSET + MM_VM_RAM_MM_SHARED_BUF_SIZE)) {
       // Allocate shared memory
       if (!mHostSharedMemoryBase) {
-        mHostSharedMemoryBase  = (UINT64 *)AllocateRuntimePages (RISCV_TEE_MM_SHARED_SIZE / SIZE_4KB);
+        mHostSharedMemoryBase  = (UINT64 *)AllocateRuntimePages (MM_VM_RAM_MM_SHARED_BUF_SIZE / SIZE_4KB);
         ASSERT (mHostSharedMemoryBase);
-        SetMem ((VOID *)mHostSharedMemoryBase, RISCV_TEE_MM_SHARED_SIZE, 0);
-        Ret = SbiTeeHostAddTvmSharedPages (RISCV_TEE_TVM_GUEST_ID,
+        SetMem ((VOID *)mHostSharedMemoryBase, MM_VM_RAM_MM_SHARED_BUF_SIZE, 0);
+        Ret = SbiTeeHostAddTvmSharedPages (mTvmGuestId,
                                           (UINT64)mHostSharedMemoryBase, TSM_PAGE_4K,
-                                          RISCV_TEE_MM_SHARED_SIZE / SIZE_4KB, RISCV_TEE_MM_SHARED_BASE);
+                                          MM_VM_RAM_MM_SHARED_BUF_SIZE / SIZE_4KB,
+                                          MM_VM_RAM_BASE + MM_VM_RAM_MM_SHARED_BUF_OFFSET);
         ASSERT (Ret.Error == SBI_SUCCESS);
       }
       Status = EFI_SUCCESS;
@@ -317,7 +312,7 @@ EFI_STATUS RiscVTriggerMM (VOID)
 
   Status = EFI_SUCCESS;
   do {
-    Ret = SbiTeeHostRunTvmVcpu (RISCV_TEE_TVM_GUEST_ID, RISCV_TEE_VCPU);
+    Ret = SbiTeeHostRunTvmVcpu (mTvmGuestId, RISCV_TEE_VCPU_ID);
     ASSERT(Ret.Error == SBI_TEE_SUCCESS);
     if (Ret.Error != SBI_TEE_SUCCESS) {
       Status = EFI_DEVICE_ERROR;
@@ -351,18 +346,16 @@ RiscVTeeDxeInitialize (
 {
   EFI_STATUS        Status;
   SBI_RET           Ret;
-  TSM_INFO          TsmInfo;
 
-  // Check TSM info
-  Ret = SbiTeeHostGetTsmInfo ((UINT64)&TsmInfo, sizeof (TsmInfo));
-  if (Ret.Error != SBI_TEE_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "%a: Cound not get TSM info, ret:%d\n", __func__, Ret.Error));
-    return EFI_NOT_STARTED;
+  Status = gBS->LocateProtocol (&gEfiTimerArchProtocolGuid, NULL, (VOID **)&gTimerAp);
+  if (EFI_ERROR (Status)) {
+    gTimerAp = NULL;
   }
 
-  if (TsmInfo.TsmState != TSM_READY) {
-    DEBUG ((DEBUG_ERROR, "%a: TSM not ready\n", __func__));
-    return EFI_NOT_READY;
+  Status = StandaloneMmInitialization (&mTvmGuestId);
+  if (EFI_ERROR (Status)) {
+    DEBUG  ((DEBUG_ERROR, "%a: Failed to initialize MM :%r", __func__, Status));
+    return Status;
   }
 
   // Register Shmem
@@ -371,12 +364,7 @@ RiscVTeeDxeInitialize (
   Ret = SbiCall (EXT_NACL, NACL_SET_SHMEM_FID, 1, (UINT64)ShmemPtr >> NACL_PFN_SHIFT);
   ASSERT (Ret.Error == SBI_SUCCESS);
 
-  Status = gBS->LocateProtocol (&gEfiTimerArchProtocolGuid, NULL, (VOID **)&gTimerAp);
-  if (EFI_ERROR (Status)) {
-    gTimerAp = NULL;
-  }
-
-  // After registering exception, it is ready to run TVM
+  // Trigger MM to intialize its resource
   Status = RiscVTriggerMM ();
   if (EFI_ERROR (Status)) {
     return Status;
@@ -384,7 +372,7 @@ RiscVTeeDxeInitialize (
 
   // Register MmCommunicate2 protocol
   ASSERT (mHostSharedMemoryBase);
-  Status = RiscVTeeMmCommunication2Initialize (mHostSharedMemoryBase, RISCV_TEE_MM_SHARED_SIZE);
+  Status = RiscVTeeMmCommunication2Initialize (mHostSharedMemoryBase, MM_VM_RAM_MM_SHARED_BUF_SIZE);
   ASSERT_EFI_ERROR (Status);
 
   return Status;

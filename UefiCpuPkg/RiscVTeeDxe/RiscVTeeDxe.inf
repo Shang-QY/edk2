@@ -19,6 +19,7 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   UefiCpuPkg/UefiCpuPkg.dec
+  StandaloneMmPkg/StandaloneMmPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -40,6 +41,7 @@
   RiscVTeeDxe.c
   RiscVTeeHyp.s
   RiscVTeeMmComm.c
+  RiscVTeeMmInit.c
 
 [Protocols]
   gEfiCpuArchProtocolGuid                       ## CONSUMES
@@ -52,6 +54,10 @@
   gEfiEventReadyToBootGuid
 
 [Pcd]
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvBase
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFdBase
 
 [Depex]
   gEfiCpuArchProtocolGuid
