@@ -184,7 +184,7 @@
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferBase|0xFFE00000
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferSize|0x00200000
 !if $(MM_WITH_TVM_ENABLE) == TRUE
-  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0x10000000
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0x10000000
   # Use emulator variable for temp
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
 !endif
