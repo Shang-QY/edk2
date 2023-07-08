@@ -50,4 +50,5 @@ SET gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamSize = 0x00010000
 # SET gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize = 0x00100000
 # Put Mm FD just behind normal FW
 SET gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFdBase = $(CODE_BASE_ADDRESS) + $(CODE_SIZE)
+SET gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize = 0x00280000
 !endif
