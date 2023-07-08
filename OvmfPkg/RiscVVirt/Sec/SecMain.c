@@ -89,8 +89,6 @@ SecStartup (
 
   SecInitializePlatform ();
 
-  StandaloneMmInitialization ();
-
   BuildStackHob (StackBase, StackSize);
 
   //

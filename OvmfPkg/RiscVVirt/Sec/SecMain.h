@@ -100,18 +100,4 @@ CpuPeimInitialization (
   VOID
   );
 
-/**
-  Perform StandaloneMm initialization.
-
-  @return EFI_SUCCESS     The StandaloneMm loaded successfully.
-  @return EFI_NOT_FOUND   The StandaloneMm FV not found.
-  @retval  Others        - As the error code indicates
-
-**/
-EFI_STATUS
-EFIAPI
-StandaloneMmInitialization (
-  VOID
-  );
-
 #endif
