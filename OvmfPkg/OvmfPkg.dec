@@ -429,18 +429,6 @@
   ## Restrict boot to EFI applications in firmware volumes.
   gUefiOvmfPkgTokenSpaceGuid.PcdBootRestrictToFirmware|FALSE|BOOLEAN|0x6c
 
-  # System Memory (DRAM): These PCDs define the region of in-built system memory
-  # Some platforms can get DRAM extensions, these additional regions may be
-  # declared to UEFI using separate resource descriptor HOBs
-  gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferBase|0|UINT64|0x00000070
-  gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferSize|0|UINT64|0x00000071
-  ## The RiscV Standalone MM FV offset and size
-  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvBase|0|UINT64|0x72
-  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize|0|UINT32|0x73
-
-  # The size reserved for Standalone MM, 4K aligned
-  gUefiOvmfPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0|UINT64|0x74
-  
 [PcdsDynamic, PcdsDynamicEx]
   gUefiOvmfPkgTokenSpaceGuid.PcdEmuVariableEvent|0|UINT64|2
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFlashVariablesEnable|FALSE|BOOLEAN|0x10

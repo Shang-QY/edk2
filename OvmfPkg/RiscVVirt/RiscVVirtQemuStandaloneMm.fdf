@@ -29,6 +29,7 @@ NumBlocks     = 0x0e00
 
 0x00000000|0x00280000
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
+# gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvBase|gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize
 FV = FVMAIN_COMPACT
 
 [FV.FVMAIN_COMPACT]
