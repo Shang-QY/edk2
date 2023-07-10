@@ -31,6 +31,7 @@
   RiscV64/StandaloneMmCoreEntryPoint.c
   RiscV64/SetPermissions.c
   RiscV64/CreateHobList.c
+  RiscV64/EntryPoint.S
 
 [Sources.X64]
   X64/StandaloneMmCoreEntryPoint.c
@@ -50,6 +51,11 @@
 [LibraryClasses.ARM, LibraryClasses.AARCH64]
   StandaloneMmMmuLib
   ArmSvcLib
+
+[LibraryClasses.RISCV64]
+  CpuLib
+  RiscVSbiLib
+  RiscVTeeLib
 
 [Guids]
   gMpInformationHobGuid
