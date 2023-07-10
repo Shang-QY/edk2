@@ -90,6 +90,91 @@ GetAndPrintBootinformation (
   return PayloadBootInfo;
 }
 
+// TODO: Penglai will go with the orignal ARM's implementaion, need improve the TVM version as will 
+// and have the same implementation here !
+#define MM_WITH_TVM_ENABLE
+#ifdef MM_WITH_TVM_ENABLE
+#include <Library/CpuLib.h>
+#include <Library/BaseRiscVTeeLib.h>
+
+#define EFI_PARAM_ATTR_APTEE        1
+//
+// Cache copy of HobList pointer.
+//
+//extern VOID  *gHobList;
+
+/**
+  A loop to delegated events.
+
+  @param  [in] EventCompleteSvcArgs   Pointer to the event completion arguments.
+
+**/
+VOID
+EFIAPI
+DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
+{
+  EFI_STATUS  Status;
+
+  ASSERT (((EFI_MM_COMMUNICATE_HEADER *)MmNsCommBufBase)->MessageLength == 0);
+
+  while (TRUE) {
+    CpuSleep ();
+    Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed delegated Status 0x%x\n",
+        Status
+        ));
+    }
+  }
+}
+
+/**
+  The entry point of Standalone MM Foundation.
+
+  @param  [in]  CpuId             The Id assigned to this running CPU
+  @param  [in]  BootInfoAddress   The address of boot info
+
+**/
+VOID
+EFIAPI
+CModuleEntryPoint (
+  IN UINT64  CpuId,
+  IN VOID    *BootInfoAddress
+  )
+{
+  EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
+  VOID                            *HobStart;
+
+  PayloadBootInfo = GetAndPrintBootinformation (BootInfoAddress);
+  if (PayloadBootInfo == NULL) {
+    return;
+  }
+
+  if ((PayloadBootInfo->Header.Attr | EFI_PARAM_ATTR_APTEE) != 0) {
+    //
+    // Register shared memory
+    //
+    SbiTeeGuestShareMemoryRegion (PayloadBootInfo->MmNsCommBufBase, PayloadBootInfo->MmNsCommBufSize);
+  }
+
+  //
+  // Create Hoblist based upon boot information passed by privileged software
+  //
+  HobStart = CreateHobListFromBootInfo (&CpuDriverEntryPoint, PayloadBootInfo);
+
+  //
+  // Call the MM Core entry point
+  //
+  ProcessModuleEntryPointList (HobStart);
+
+  DEBUG ((DEBUG_INFO, "Cpu Driver EP %p\n", (VOID *)CpuDriverEntryPoint));
+
+  DelegatedEventLoop (CpuId, PayloadBootInfo->MmNsCommBufBase + sizeof (EFI_MMRAM_DESCRIPTOR));
+}
+
+#else
 /**
   The entry point of Standalone MM Foundation.
 
@@ -179,3 +264,4 @@ finish:
     Ret = 0;
   }
 }
+#endif
