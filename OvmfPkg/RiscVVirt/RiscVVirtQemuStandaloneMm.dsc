@@ -54,13 +54,13 @@
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
   VariableFlashInfoLib|MdeModulePkg/Library/BaseVariableFlashInfoLib/BaseVariableFlashInfoLib.inf
+  RiscVSbiLib|MdePkg/Library/BaseRiscVSbiLib/BaseRiscVSbiLib.inf
+  CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
+  RiscVTeeLib|MdePkg/Library/BaseRiscVTeeLib/BaseRiscVTeeLib.inf
 !if $(MM_WITH_TVM_ENABLE) == FALSE
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
 !else
-  RiscVSbiLib|MdePkg/Library/BaseRiscVSbiLib/BaseRiscVSbiLib.inf
   SerialPortLib|StandaloneMmPkg/Library/BaseSerialPortLibRiscVSbiLibMm/BaseSerialPortLibRiscVSbiLib.inf
-  CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
-  RiscVTeeLib|MdePkg/Library/BaseRiscVTeeLib/BaseRiscVTeeLib.inf
 !endif
 
   #
@@ -172,3 +172,7 @@
 ###################################################################################################
 [BuildOptions.RISCV64]
   GCC:*_*_*_DLINK_FLAGS = -z common-page-size=0x1000
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+  GCC:*_*_*_CC_FLAGS = -DMM_WITH_TVM_ENABLE
+  GCC:*_*_*_PP_FLAGS = -DMM_WITH_TVM_ENABLE
+!endif
