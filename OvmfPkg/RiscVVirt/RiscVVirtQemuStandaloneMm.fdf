@@ -28,7 +28,8 @@ BlockSize     = 0x00001000
 NumBlocks     = 0x0e00
 
 0x00000000|0x00280000
-gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
+gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvBase|gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmFvSize
+
 FV = FVMAIN_COMPACT
 
 [FV.FVMAIN_COMPACT]
@@ -50,9 +51,11 @@ READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
   INF StandaloneMmPkg/Core/StandaloneMmCore.inf
+!if $(MM_WITH_TVM_ENABLE) == FALSE  
   INF OvmfPkg/VirtNorFlashDxe/VirtNorFlashStandaloneMm.inf
   INF MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
   INF MdeModulePkg/Universal/Variable/RuntimeDxe/VariableStandaloneMm.inf
+!endif  
   INF StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
 
 ################################################################################

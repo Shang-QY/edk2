@@ -36,7 +36,7 @@
   DEFINE TPM2_ENABLE             = FALSE
   DEFINE TPM2_CONFIG_ENABLE      = FALSE
   DEFINE DEBUG_ON_SERIAL_PORT    = TRUE
-  DEFINE SECURE_BOOT_ENABLE      = FALSE
+  DEFINE MM_WITH_TVM_ENABLE      = FALSE
 
   #
   # Network definition
@@ -183,6 +183,11 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdRemovableMediaImageVerificationPolicy|0x04
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferBase|0xFFE00000
   gUefiOvmfPkgTokenSpaceGuid.PcdMmBufferSize|0x00200000
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+  gStandaloneMmPkgTokenSpaceGuid.PcdRiscVStandaloneMmMemSize|0x10000000
+  # Use emulator variable for temp
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
+!endif
 !endif
 
   gEfiShellPkgTokenSpaceGuid.PcdShellFileOperationSize|0x20000
@@ -341,12 +346,26 @@
       BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
   }
 !else
+!if $(MM_WITH_TVM_ENABLE) == TRUE
+  UefiCpuPkg/RiscVTeeDxe/RiscVTeeDxe.inf
+  # # TODO: Need change to use VariableSmmRuntimeDxe, otherwise no StandaloneMm secure variable service !
+  MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteDxe.inf
+  MdeModulePkg/Universal/Variable/RuntimeDxe/VariableRuntimeDxe.inf {
+    <LibraryClasses>
+      NULL|MdeModulePkg/Library/VarCheckUefiLib/VarCheckUefiLib.inf
+      # AuthVariableLib|MdeModulePkg/Library/AuthVariableLibNull/AuthVariableLibNull.inf
+      # VarCheckLib|MdeModulePkg/Library/VarCheckLib/VarCheckLib.inf
+      # don't use unaligned CopyMem () on the UEFI varstore NOR flash region
+      BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  }
+!else
   OvmfPkg/RiscVVirt/MmCommunicationDxe/MmCommunication.inf {
    <LibraryClasses>
       NULL|StandaloneMmPkg/Library/VariableMmDependency/VariableMmDependency.inf
   }
   MdeModulePkg/Universal/Variable/RuntimeDxe/VariableSmmRuntimeDxe.inf
   # SecurityPkg/VariableAuthenticated/SecureBootConfigDxe/SecureBootConfigDxe.inf
+!endif  
 !endif
 
   MdeModulePkg/Universal/Console/ConPlatformDxe/ConPlatformDxe.inf
