@@ -54,7 +54,14 @@
   PciExpressLib|MdePkg/Library/BasePciExpressLib/BasePciExpressLib.inf
   PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
   VariableFlashInfoLib|MdeModulePkg/Library/BaseVariableFlashInfoLib/BaseVariableFlashInfoLib.inf
+!if $(MM_WITH_TVM_ENABLE) == FALSE
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
+!else
+  RiscVSbiLib|MdePkg/Library/BaseRiscVSbiLib/BaseRiscVSbiLib.inf
+  SerialPortLib|StandaloneMmPkg/Library/BaseSerialPortLibRiscVSbiLibMm/BaseSerialPortLibRiscVSbiLib.inf
+  CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
+  RiscVTeeLib|MdePkg/Library/BaseRiscVTeeLib/BaseRiscVTeeLib.inf
+!endif
 
   #
   # Entry point
@@ -91,7 +98,7 @@
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x0f
 
   gEfiMdePkgTokenSpaceGuid.PcdMaximumGuidedExtractHandler|0x2
-
+!if $(MM_WITH_TVM_ENABLE) == FALSE
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFdBaseAddress|0x22000000
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFirmwareFdSize|0x01000000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
@@ -104,6 +111,8 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize|0x00040000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase|0x22080000
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize|0x00040000
+!endif
+  
   # Serial Port
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio|TRUE
   gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase|0x10002000
@@ -136,6 +145,7 @@
   #
   StandaloneMmPkg/Core/StandaloneMmCore.inf
   StandaloneMmPkg/Drivers/StandaloneMmCpu/StandaloneMmCpu.inf
+!if $(MM_WITH_TVM_ENABLE) == FALSE  
   OvmfPkg/VirtNorFlashDxe/VirtNorFlashStandaloneMm.inf
   MdeModulePkg/Universal/FaultTolerantWriteDxe/FaultTolerantWriteStandaloneMm.inf
 
@@ -149,6 +159,7 @@
       VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLib.inf
       VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
   }
+!endif
 
 ###################################################################################################
 #
