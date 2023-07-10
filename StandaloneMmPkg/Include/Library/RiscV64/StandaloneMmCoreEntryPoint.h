@@ -50,6 +50,9 @@ typedef struct {
   EFI_RISCV_MM_CPU_INFO            CpuInfo;
 } EFI_RISCV_MM_BOOT_INFO;
 
+#define BOOT_INFO_STACK_BASE_OFFSET    32 // Used in assembly
+STATIC_ASSERT (BOOT_INFO_STACK_BASE_OFFSET == OFFSET_OF (EFI_RISCV_MM_BOOT_INFO, MmStackBase));
+
 typedef
 EFI_STATUS
 (*PI_MM_CPU_DRIVER_ENTRYPOINT) (
@@ -151,6 +154,23 @@ CreateHobListFromBootInfo (
   IN       EFI_RISCV_MM_BOOT_INFO         *PayloadBootInfo
   );
 
+#define MM_WITH_TVM_ENABLE
+#ifdef MM_WITH_TVM_ENABLE
+/**
+  The entry point of Standalone MM Foundation.
+
+  @param  [in]  CpuId             The Id assigned to this running CPU
+  @param  [in]  BootInfoAddress   The address of boot info
+
+**/
+VOID
+EFIAPI
+CModuleEntryPoint (
+  IN UINT64  CpuId,
+  IN VOID    *BootInfoAddress
+  );
+
+#else
 /**
   The entry point of Standalone MM Foundation.
 
@@ -168,7 +188,7 @@ _ModuleEntryPoint (
   IN UINT64  cookie1,
   IN UINT64  cookie2
   );
-
+#endif
 /**
   Auto generated function that calls the library constructors for all of the module's dependent libraries.
 
