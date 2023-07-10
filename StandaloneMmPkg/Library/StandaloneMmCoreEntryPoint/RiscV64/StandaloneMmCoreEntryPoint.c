@@ -10,6 +10,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <PiMm.h>
 
+#include <Library/StandaloneMmCpu.h>
 #include <Library/RiscV64/StandaloneMmCoreEntryPoint.h>
 
 #include <PiPei.h>
@@ -78,14 +79,8 @@ GetAndPrintBootinformation (
   DEBUG ((DEBUG_INFO, "MmSharedBufSize - 0x%x\n", PayloadBootInfo->MmSharedBufSize));
 
   DEBUG ((DEBUG_INFO, "NumCpus         - 0x%x\n", PayloadBootInfo->NumCpus));
-  DEBUG ((DEBUG_INFO, "CpuInfo         - 0x%p\n", PayloadBootInfo->CpuInfo));
 
-  PayloadCpuInfo = (EFI_RISCV_MM_CPU_INFO *)PayloadBootInfo->CpuInfo;
-
-  if (PayloadCpuInfo == NULL) {
-    DEBUG ((DEBUG_ERROR, "PayloadCpuInfo NULL\n"));
-    return NULL;
-  }
+  PayloadCpuInfo = (EFI_RISCV_MM_CPU_INFO *)&(PayloadBootInfo->CpuInfo);
 
   for (Index = 0; Index < PayloadBootInfo->NumCpus; Index++) {
     DEBUG ((DEBUG_INFO, "ProcessorId        - 0x%lx\n", PayloadCpuInfo[Index].ProcessorId));
@@ -95,16 +90,18 @@ GetAndPrintBootinformation (
   return PayloadBootInfo;
 }
 
+// TODO: Penglai will go with the orignal ARM's implementaion, need improve the TVM version as will 
+// and have the same implementation here !
+#define MM_WITH_TVM_ENABLE
 #ifdef MM_WITH_TVM_ENABLE
-
-#include <Library/DebugLib.h>
-#include <Library/BaseLib.h>
-#include <Library/BaseRiscVTeeLib.h>
 #include <Library/CpuLib.h>
+#include <Library/BaseRiscVTeeLib.h>
+
+#define EFI_PARAM_ATTR_APTEE        1
 //
 // Cache copy of HobList pointer.
 //
-VOID  *gHobList = NULL;
+//extern VOID  *gHobList;
 
 /**
   A loop to delegated events.
@@ -147,7 +144,7 @@ CModuleEntryPoint (
   IN VOID    *BootInfoAddress
   )
 {
-  /  EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
+  EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
   VOID                            *HobStart;
 
   PayloadBootInfo = GetAndPrintBootinformation (BootInfoAddress);
@@ -175,10 +172,8 @@ CModuleEntryPoint (
   DEBUG ((DEBUG_INFO, "Cpu Driver EP %p\n", (VOID *)CpuDriverEntryPoint));
 
   DelegatedEventLoop (CpuId, PayloadBootInfo->MmNsCommBufBase + sizeof (EFI_MMRAM_DESCRIPTOR));
-
 }
 
-// Penglai will go with the below implementaion, need improve the TVM version as will
 #else
 /**
   The entry point of Standalone MM Foundation.

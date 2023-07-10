@@ -47,8 +47,11 @@ typedef struct {
   UINT64                           MmSharedBufSize;
   UINT32                           NumMmMemRegions;
   UINT32                           NumCpus;
-  EFI_RISCV_MM_CPU_INFO            *CpuInfo;
+  EFI_RISCV_MM_CPU_INFO            CpuInfo;
 } EFI_RISCV_MM_BOOT_INFO;
+
+#define BOOT_INFO_STACK_BASE_OFFSET    32 // Used in assembly
+STATIC_ASSERT (BOOT_INFO_STACK_BASE_OFFSET == OFFSET_OF (EFI_RISCV_MM_BOOT_INFO, MmStackBase));
 
 typedef
 EFI_STATUS
@@ -154,6 +157,21 @@ CreateHobListFromBootInfo (
 /**
   The entry point of Standalone MM Foundation.
 
+  @param  [in]  CpuId             The Id assigned to this running CPU
+  @param  [in]  BootInfoAddress   The address of boot info
+
+**/
+VOID
+EFIAPI
+CModuleEntryPoint (
+  IN UINT64  CpuId,
+  IN VOID    *BootInfoAddress
+  );
+
+#if 0
+/**
+  The entry point of Standalone MM Foundation.
+
   @param  [in]  SharedBufAddress  Pointer to the Buffer between SPM and SP.
   @param  [in]  SharedBufSize     Size of the shared buffer.
   @param  [in]  cookie1           Cookie 1
@@ -168,7 +186,7 @@ _ModuleEntryPoint (
   IN UINT64  cookie1,
   IN UINT64  cookie2
   );
-
+#endif
 /**
   Auto generated function that calls the library constructors for all of the module's dependent libraries.
 

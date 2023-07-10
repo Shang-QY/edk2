@@ -29,7 +29,7 @@
 #include <Guid/ZeroGuid.h>
 #include <Guid/MmramMemoryReserve.h>
 
-#include "StandaloneMmCpu.h"
+#include <Library/StandaloneMmCpu.h>
 
 // GUID to identify HOB with whereabouts of communication buffer with Normal
 // World

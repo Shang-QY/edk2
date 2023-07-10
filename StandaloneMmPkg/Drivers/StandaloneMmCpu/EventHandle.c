@@ -33,7 +33,7 @@
   #include <IndustryStandard/ArmStdSmc.h>
 #endif
 
-#include "StandaloneMmCpu.h"
+#include <Library/StandaloneMmCpu.h>
 
 EFI_STATUS
 EFIAPI

@@ -17,23 +17,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Guid/MpInformation.h>
 
 #include <Library/RiscV64/StandaloneMmCoreEntryPoint.h>
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  #include <Library/ArmMmuLib.h>
-  #include <Library/ArmSvcLib.h>
-#elif defined (MDE_CPU_RISCV64)
-  #include <Library/BaseRiscVSbiLib.h>
-#else
-  #error Unsupported Processor Type
-#endif
+#include <Library/BaseRiscVSbiLib.h>
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/SerialPortLib.h>
-
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  #include <IndustryStandard/ArmStdSmc.h>
-#endif
 
 extern EFI_HOB_HANDOFF_INFO_TABLE *
 HobConstructor (
@@ -126,7 +115,7 @@ CreateHobListFromBootInfo (
   MpInformationHobData->NumberOfProcessors        = PayloadBootInfo->NumCpus;
   MpInformationHobData->NumberOfEnabledProcessors = PayloadBootInfo->NumCpus;
   ProcInfoBuffer                                  = MpInformationHobData->ProcessorInfoBuffer;
-  CpuInfo                                         = PayloadBootInfo->CpuInfo;
+  CpuInfo                                         = &(PayloadBootInfo->CpuInfo);
 
   for (Index = 0; Index < PayloadBootInfo->NumCpus; Index++) {
     ProcInfoBuffer[Index].ProcessorId      = CpuInfo[Index].ProcessorId;
