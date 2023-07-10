@@ -56,7 +56,13 @@
   PlatformHookLib|MdeModulePkg/Library/BasePlatformHookLibNull/BasePlatformHookLibNull.inf
   VariableFlashInfoLib|MdeModulePkg/Library/BaseVariableFlashInfoLib/BaseVariableFlashInfoLib.inf
   RiscVSbiLib|MdePkg/Library/BaseRiscVSbiLib/BaseRiscVSbiLib.inf
+  CpuLib|MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
+  RiscVTeeLib|MdePkg/Library/BaseRiscVTeeLib/BaseRiscVTeeLib.inf
+!if $(MM_WITH_COVE_ENABLE) == FALSE
   SerialPortLib|MdeModulePkg/Library/BaseSerialPortLib16550/BaseSerialPortLib16550.inf
+!else
+  SerialPortLib|StandaloneMmPkg/Library/BaseSerialPortLibRiscVSbiLibMm/BaseSerialPortLibRiscVSbiLib.inf
+!endif
 
   #
   # Entry point
@@ -137,3 +143,17 @@
       VariablePolicyLib|MdeModulePkg/Library/VariablePolicyLib/VariablePolicyLib.inf
       VariablePolicyHelperLib|MdeModulePkg/Library/VariablePolicyHelperLib/VariablePolicyHelperLib.inf
   }
+
+###################################################################################################
+#
+# BuildOptions Section - Define the module specific tool chain flags that should be used as
+#                        the default flags for a module. These flags are appended to any
+#                        standard flags that are defined by the build process. They can be
+#                        applied for any modules or only those modules with the specific
+#                        module style (EDK or EDKII) specified in [Components] section.
+#
+###################################################################################################
+[BuildOptions.RISCV64]
+!if $(MM_WITH_COVE_ENABLE) == TRUE
+  GCC:*_*_*_CC_FLAGS = -DMM_WITH_COVE_ENABLE
+!endif

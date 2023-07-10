@@ -25,8 +25,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/PcdLib.h>
 
 #include "Library/BaseRiscVSbiLib.h"
+#include <Library/BaseRiscVTeeLib.h>
+#include <Library/CpuLib.h>
 
 #define BOOT_PAYLOAD_VERSION  1
+#define EFI_PARAM_ATTR_APTEE  1
 
 PI_MM_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
@@ -111,7 +114,11 @@ DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
   MmContext.FuncId = SBI_SMC_MM_COMPLETE_EVT;
 
   while (TRUE) {
-    SbiCallSmcMm(&MmContext);
+#ifdef MM_WITH_COVE_ENABLE
+    CpuSleep ();
+#else
+    SbiCallSmcMm (&MmContext);
+#endif
     Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
     if (EFI_ERROR (Status)) {
       DEBUG ((
@@ -144,6 +151,15 @@ CModuleEntryPoint (
   if (PayloadBootInfo == NULL) {
     return;
   }
+
+#ifdef MM_WITH_COVE_ENABLE
+  if ((PayloadBootInfo->Header.Attr | EFI_PARAM_ATTR_APTEE) != 0) {
+    //
+    // Register shared memory
+    //
+    SbiTeeGuestShareMemoryRegion (PayloadBootInfo->MmNsCommBufBase, PayloadBootInfo->MmNsCommBufSize);
+  }
+#endif
 
   //
   // Create Hoblist based upon boot information passed by privileged software
