@@ -193,11 +193,9 @@ typedef struct {
 **/
 VOID
 EFIAPI
-_ModuleEntryPoint (
-  IN VOID    *SharedBufAddress,
-  IN UINT64  SharedBufSize,
-  IN UINT64  SharedCpuEntry,
-  IN UINT64  cookie
+CModuleEntryPoint (
+  IN UINT64  CpuId,
+  IN VOID    *BootInfoAddress
   )
 {
   EFI_RISCV_SMM_CONTEXT      CommunicateSmmContext;
@@ -211,7 +209,7 @@ _ModuleEntryPoint (
   VOID                            *TeData;
   UINTN                           TeDataSize;
   EFI_PHYSICAL_ADDRESS            ImageBase;
-  PayloadBootInfo = GetAndPrintBootinformation (SharedBufAddress);
+  PayloadBootInfo = GetAndPrintBootinformation (BootInfoAddress);
   if (PayloadBootInfo == NULL) {
     Status = EFI_UNSUPPORTED;
     goto finish;
@@ -257,9 +255,6 @@ _ModuleEntryPoint (
   ProcessModuleEntryPointList (HobStart);
 
   DEBUG ((DEBUG_INFO, "Shared Cpu Driver EP %p\n", (VOID *)CpuDriverEntryPoint));
-  if ((VOID **)SharedCpuEntry != NULL) {
-	  *((VOID **)SharedCpuEntry) = (VOID *)CpuDriverEntryPoint;
-  }
 
 finish:
   if (Status == RETURN_UNSUPPORTED) {
