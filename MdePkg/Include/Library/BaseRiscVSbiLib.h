@@ -58,6 +58,7 @@
 /* SBI function IDs for COVE extension */
 #define SBI_COVE_SMM_VERSION		0x80
 #define SBI_COVE_SMM_COMMUNICATE	0x81
+#define SBI_COVE_SMM_EVENT_COMPLETE	0x82
 
 /* SBI return error codes */
 #define SBI_SUCCESS                0
