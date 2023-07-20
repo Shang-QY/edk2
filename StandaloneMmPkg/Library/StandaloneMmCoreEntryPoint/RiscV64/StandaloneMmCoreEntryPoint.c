@@ -8,6 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include "Library/BaseRiscVSbiLib.h"
 #include <PiMm.h>
 
 #include <Library/StandaloneMmCpu.h>
@@ -174,6 +175,13 @@ CModuleEntryPoint (
 }
 
 #else
+
+typedef struct {
+	UINT64 FuncId;
+	UINT64 Regs[2];
+	UINT64 Return;
+} EFI_COMMUNICATE_REG;
+
 /**
   The entry point of Standalone MM Foundation.
 
@@ -192,6 +200,7 @@ _ModuleEntryPoint (
   IN UINT64  cookie
   )
 {
+  EFI_RISCV_SMM_CONTEXT      CommunicateSmmContext;
   PE_COFF_LOADER_IMAGE_CONTEXT    ImageContext;
   EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
   EFI_STATUS                      Status;
@@ -261,6 +270,29 @@ finish:
     Ret = -7;
   } else {
     Ret = 0;
+  }
+
+  ZeroMem (&CommunicateSmmContext, sizeof (EFI_RISCV_SMM_CONTEXT));
+  // SMM Func ID
+  CommunicateSmmContext.FuncId = SBI_COVE_SMM_EVENT_COMPLETE;
+
+  while (TRUE) {
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, before ecall exit ****\n"));
+    
+    SbiCallCoVESmm(&CommunicateSmmContext);
+
+    EFI_COMMUNICATE_REG *comm_regs = (EFI_COMMUNICATE_REG *)0x80300000;
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, resume handling request ****\n"));
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, request FuncId: 0x%x, CpuId: 0x%x, BufBase: 0x%lx ****\n", comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]));
+    Status = CpuDriverEntryPoint (comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]);
+
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "Failed delegated Status 0x%x\n",
+        Status
+        ));
+    }
   }
 }
 #endif
