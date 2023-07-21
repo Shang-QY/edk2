@@ -102,6 +102,13 @@ GetAndPrintBootinformation (
 // Cache copy of HobList pointer.
 //
 //extern VOID  *gHobList;
+#else
+typedef struct {
+	UINT64 FuncId;
+	UINT64 Regs[2];
+	UINT64 Return;
+} EFI_COMMUNICATE_REG;
+#endif
 
 /**
   A loop to delegated events.
@@ -113,13 +120,29 @@ VOID
 EFIAPI
 DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
 {
+  EFI_RISCV_SMM_CONTEXT      CommunicateSmmContext;
   EFI_STATUS  Status;
 
   ASSERT (((EFI_MM_COMMUNICATE_HEADER *)MmNsCommBufBase)->MessageLength == 0);
 
+  ZeroMem (&CommunicateSmmContext, sizeof (EFI_RISCV_SMM_CONTEXT));
+  // SMM Func ID
+  CommunicateSmmContext.FuncId = SBI_COVE_SMM_EVENT_COMPLETE;
+
   while (TRUE) {
+#ifdef MM_WITH_TVM_ENABLE
     CpuSleep ();
     Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
+#else
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, before ecall exit ****\n"));
+    
+    SbiCallCoVESmm(&CommunicateSmmContext);
+
+    EFI_COMMUNICATE_REG *comm_regs = (EFI_COMMUNICATE_REG *)0x80300000;
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, resume handling request ****\n"));
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, request FuncId: 0x%x, CpuId: 0x%x, BufBase: 0x%lx ****\n", comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]));
+    Status = CpuDriverEntryPoint (comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]);
+#endif
     if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
@@ -152,12 +175,14 @@ CModuleEntryPoint (
     return;
   }
 
+#ifdef MM_WITH_TVM_ENABLE
   if ((PayloadBootInfo->Header.Attr | EFI_PARAM_ATTR_APTEE) != 0) {
     //
     // Register shared memory
     //
     SbiTeeGuestShareMemoryRegion (PayloadBootInfo->MmNsCommBufBase, PayloadBootInfo->MmNsCommBufSize);
   }
+#endif
 
   //
   // Create Hoblist based upon boot information passed by privileged software
@@ -173,121 +198,3 @@ CModuleEntryPoint (
 
   DelegatedEventLoop (CpuId, PayloadBootInfo->MmNsCommBufBase + sizeof (EFI_MMRAM_DESCRIPTOR));
 }
-
-#else
-
-typedef struct {
-	UINT64 FuncId;
-	UINT64 Regs[2];
-	UINT64 Return;
-} EFI_COMMUNICATE_REG;
-
-/**
-  The entry point of Standalone MM Foundation.
-
-  @param  [in]  SharedBufAddress  Pointer to the Buffer between SPM and SP.
-  @param  [in]  SharedBufSize     Size of the shared buffer.
-  @param  [in]  SharedCpuEntry    Pointer to the Buffer to store the CpuEntryPoint
-  @param  [in]  cookie2           Cookie 2
-
-**/
-VOID
-EFIAPI
-CModuleEntryPoint (
-  IN UINT64  CpuId,
-  IN VOID    *BootInfoAddress
-  )
-{
-  EFI_RISCV_SMM_CONTEXT      CommunicateSmmContext;
-  PE_COFF_LOADER_IMAGE_CONTEXT    ImageContext;
-  EFI_RISCV_MM_BOOT_INFO          *PayloadBootInfo;
-  EFI_STATUS                      Status;
-  INT32                           Ret;
-  UINT32                          SectionHeaderOffset;
-  UINT16                          NumberOfSections;
-  VOID                            *HobStart;
-  VOID                            *TeData;
-  UINTN                           TeDataSize;
-  EFI_PHYSICAL_ADDRESS            ImageBase;
-  PayloadBootInfo = GetAndPrintBootinformation (BootInfoAddress);
-  if (PayloadBootInfo == NULL) {
-    Status = EFI_UNSUPPORTED;
-    goto finish;
-  }
-  // Locate PE/COFF File information for the Standalone MM core module
-  Status = LocateStandaloneMmCorePeCoffData (
-             (EFI_FIRMWARE_VOLUME_HEADER *)(UINTN)PayloadBootInfo->MmImageBase,
-             &TeData,
-             &TeDataSize
-             );
-
-  if (EFI_ERROR (Status)) {
-    goto finish;
-  }
-
-  // Obtain the PE/COFF Section information for the Standalone MM core module
-  Status = GetStandaloneMmCorePeCoffSections (
-             TeData,
-             &ImageContext,
-             &ImageBase,
-             &SectionHeaderOffset,
-             &NumberOfSections
-             );
-
-  if (EFI_ERROR (Status)) {
-    goto finish;
-  }
-
-  if (ImageContext.ImageAddress != (UINTN)TeData) {
-    ImageContext.ImageAddress = (UINTN)TeData;
-    Status = PeCoffLoaderRelocateImage (&ImageContext);
-    ASSERT_EFI_ERROR (Status);
-  }
-
-  //
-  // Create Hoblist based upon boot information passed by privileged software
-  //
-  HobStart = CreateHobListFromBootInfo (&CpuDriverEntryPoint, PayloadBootInfo);
-
-  //
-  // Call the MM Core entry point
-  //
-  ProcessModuleEntryPointList (HobStart);
-
-  DEBUG ((DEBUG_INFO, "Shared Cpu Driver EP %p\n", (VOID *)CpuDriverEntryPoint));
-
-finish:
-  if (Status == RETURN_UNSUPPORTED) {
-    Ret = -1;
-  } else if (Status == RETURN_INVALID_PARAMETER) {
-    Ret = -2;
-  } else if (Status == EFI_NOT_FOUND) {
-    Ret = -7;
-  } else {
-    Ret = 0;
-  }
-
-  ZeroMem (&CommunicateSmmContext, sizeof (EFI_RISCV_SMM_CONTEXT));
-  // SMM Func ID
-  CommunicateSmmContext.FuncId = SBI_COVE_SMM_EVENT_COMPLETE;
-
-  while (TRUE) {
-    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, before ecall exit ****\n"));
-    
-    SbiCallCoVESmm(&CommunicateSmmContext);
-
-    EFI_COMMUNICATE_REG *comm_regs = (EFI_COMMUNICATE_REG *)0x80300000;
-    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, resume handling request ****\n"));
-    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, request FuncId: 0x%x, CpuId: 0x%x, BufBase: 0x%lx ****\n", comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]));
-    Status = CpuDriverEntryPoint (comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]);
-
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "Failed delegated Status 0x%x\n",
-        Status
-        ));
-    }
-  }
-}
-#endif
