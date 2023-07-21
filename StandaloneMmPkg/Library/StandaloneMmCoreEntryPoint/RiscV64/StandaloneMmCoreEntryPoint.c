@@ -121,6 +121,7 @@ EFIAPI
 DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
 {
   EFI_RISCV_SMM_CONTEXT      CommunicateSmmContext;
+  EFI_COMMUNICATE_REG        CommRegs;
   EFI_STATUS  Status;
 
   ASSERT (((EFI_MM_COMMUNICATE_HEADER *)MmNsCommBufBase)->MessageLength == 0);
@@ -128,6 +129,7 @@ DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
   ZeroMem (&CommunicateSmmContext, sizeof (EFI_RISCV_SMM_CONTEXT));
   // SMM Func ID
   CommunicateSmmContext.FuncId = SBI_COVE_SMM_EVENT_COMPLETE;
+  CommunicateSmmContext.PayloadAddress = (UINT64)&CommRegs;
 
   while (TRUE) {
 #ifdef MM_WITH_TVM_ENABLE
@@ -138,10 +140,9 @@ DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
     
     SbiCallCoVESmm(&CommunicateSmmContext);
 
-    EFI_COMMUNICATE_REG *comm_regs = (EFI_COMMUNICATE_REG *)0x80300000;
     DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, resume handling request ****\n"));
-    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, request FuncId: 0x%x, CpuId: 0x%x, BufBase: 0x%lx ****\n", comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]));
-    Status = CpuDriverEntryPoint (comm_regs->FuncId, comm_regs->Regs[0], comm_regs->Regs[1]);
+    DEBUG ((DEBUG_INFO, "In DelegatedEventLoop while loop, request FuncId: 0x%x, CpuId: 0x%x, BufBase: 0x%lx ****\n", CommRegs.FuncId, CommRegs.Regs[0], CommRegs.Regs[1]));
+    Status = CpuDriverEntryPoint (CommRegs.FuncId, CommRegs.Regs[0], CommRegs.Regs[1]);
 #endif
     if (EFI_ERROR (Status)) {
       DEBUG ((
