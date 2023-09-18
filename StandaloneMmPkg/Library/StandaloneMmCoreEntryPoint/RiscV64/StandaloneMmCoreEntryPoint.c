@@ -31,6 +31,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define BOOT_PAYLOAD_VERSION  1
 #define EFI_PARAM_ATTR_COVE   1
 
+#define RPMI_MM_TRANSPORT_ID  0x00
+#define RPMI_MM_SRV_GROUP     0x08
+#define RPMI_MM_SRV_COMPLETE  0x05
+
 PI_MM_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
 /**
@@ -105,33 +109,15 @@ EFIAPI
 DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
 {
   EFI_STATUS  Status;
-  EFI_RISCV_MM_CONTEXT MmContext;
-  EFI_RISCV_MM_CONTEXT MmCompleteEvt;
   ASSERT (((EFI_MM_COMMUNICATE_HEADER *)MmNsCommBufBase)->MessageLength == 0);
-
-  ZeroMem (&MmContext, sizeof (EFI_RISCV_MM_CONTEXT));
-  // SMC MM Func ID
-  MmContext.FuncId = SBI_SMC_MM_COMPLETE_EVT;
-  MmContext.PayloadAddress = (UINT64)&MmCompleteEvt;
 
   while (TRUE) {
 #ifdef MM_WITH_COVE_ENABLE
     CpuSleep ();
     Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
 #else
-    SbiCallSmcMm (&MmContext);
-    //
-    // Passes SMC FID of the MM_COMMUNICATE interface as the Event ID upon
-    // receipt of a synchronous MM request. Use the Event ID to distinguish
-    // between synchronous and asynchronous events.
-    //
-    if (SBI_SMC_MM_COMMUNICATE != (UINT32)MmCompleteEvt.FuncId)
-    {
-      DEBUG ((DEBUG_ERROR, "UnRecognized Event - 0x%x\n", (UINT32)MmCompleteEvt.FuncId));
-      continue;
-    }
-
-    Status = CpuDriverEntryPoint (MmCompleteEvt.FuncId, CpuId, MmNsCommBufBase);
+    SbiRpxySendNormalMessage(RPMI_MM_TRANSPORT_ID, RPMI_MM_TRANSPORT_ID, RPMI_MM_SRV_COMPLETE);
+    Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
 #endif
     if (EFI_ERROR (Status)) {
       DEBUG ((

@@ -79,14 +79,11 @@ MmCommunication2Communicate (
 {
 
   EFI_MM_COMMUNICATE_HEADER  *CommunicateHeader;
-  EFI_RISCV_MM_CONTEXT       CommunicateMmContext;
   EFI_STATUS                 Status;
   UINTN                      BufferSize;
 
   Status     = EFI_ACCESS_DENIED;
   BufferSize = 0;
-
-  ZeroMem (&CommunicateMmContext, sizeof (EFI_RISCV_MM_CONTEXT));
 
   //
   // Check parameters
@@ -142,20 +139,12 @@ MmCommunication2Communicate (
     return Status;
   }
 
-  // SMM Func ID
-  CommunicateMmContext.FuncId = SBI_SMC_MM_COMMUNICATE;
-
-  // Cookie
-  CommunicateMmContext.Cookie = 0;
-
   // Copy Communication Payload
   CopyMem ((VOID *)mNsCommBuffMemRegion.VirtualBase, CommBufferVirtual, BufferSize);
 
-  // comm_buffer_address (64-bit physical address)
-  CommunicateMmContext.PayloadAddress = (UINT64)mNsCommBuffMemRegion.PhysicalBase;
 
   // Call the Standalone MM environment.
-  Status = SbiCallSmcMm(&CommunicateMmContext);
+  Status = SbiRpxySendNormalMessage(RPMI_MM_TRANSPORT_ID, RPMI_MM_SRV_GROUP, RPMI_MM_SRV_MM_COMMUNICATE);
   switch (Status) {
     case EFI_SUCCESS:
       ZeroMem (CommBufferVirtual, BufferSize);
@@ -195,15 +184,20 @@ GetMmCompatibility (
 {
   EFI_STATUS    Status;
   UINT32        MmVersion;
-  EFI_RISCV_MM_CONTEXT      MmVersionContext;
 
-  MmVersionContext.FuncId = SBI_SMC_MM_VERSION;
-  MmVersionContext.Cookie = 0;
-  MmVersionContext.PayloadAddress = (UINT64)&MmVersion;
-
-  Status = SbiCallSmcMm(&MmVersionContext);
-  if (Status == EFI_SUCCESS)
-  {
+  Status = SbiRpxySetShmem(0x1000, mNsCommBuffMemRegion.PhysicalBase);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "MmCommunicationInitialize: "
+      "Failed to set RPXY shared memory\n"
+      ));
+    Status = EFI_ACCESS_DENIED;
+    ASSERT (0);
+  }
+  Status = SbiRpxySendNormalMessage(RPMI_MM_TRANSPORT_ID, RPMI_MM_SRV_GROUP, RPMI_MM_SRV_MM_VERSION);
+  if (Status == EFI_SUCCESS) {
+    MmVersion = *(UINT32 *)mNsCommBuffMemRegion.PhysicalBase;
     if ((MM_MAJOR_VER (MmVersion) == MM_CALLER_MAJOR_VER) &&
         (MM_MINOR_VER (MmVersion) >= MM_CALLER_MINOR_VER))
     {
@@ -297,14 +291,14 @@ MmCommunication2Initialize (
   EFI_STATUS  Status;
   UINTN       Index;
 
+  mNsCommBuffMemRegion.PhysicalBase = PcdGet64 (PcdMmBufferBase);
+  mNsCommBuffMemRegion.Length      = PcdGet64 (PcdMmBufferSize);
+
   // Check if we can make the MM call
   Status = GetMmCompatibility ();
   if (EFI_ERROR (Status)) {
     goto ReturnErrorStatus;
   }
-
-  mNsCommBuffMemRegion.PhysicalBase = PcdGet64 (PcdMmBufferBase);
-  mNsCommBuffMemRegion.Length      = PcdGet64 (PcdMmBufferSize);
 
   ASSERT (mNsCommBuffMemRegion.PhysicalBase != 0);
   ASSERT (mNsCommBuffMemRegion.Length > sizeof (EFI_MMRAM_DESCRIPTOR));

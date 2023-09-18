@@ -25,7 +25,7 @@
 #define SBI_EXT_DBCN                 0x4442434E
 #define SBI_EXT_TIME                 0x54494D45
 #define SBI_EXT_SRST                 0x53525354
-#define SBI_EXT_SMC                  0x48923468
+#define SBI_EXT_RPXY                 0x52505859
 
 /* SBI function IDs for base extension */
 #define SBI_EXT_BASE_SPEC_VERSION   0x0
@@ -55,7 +55,10 @@
 #define SBI_SRST_RESET_REASON_NONE     0x0
 #define SBI_SRST_RESET_REASON_SYSFAIL  0x1
 
-/* SBI function IDs for SMC extension */
+/* SBI function IDs for RPXY extension */
+#define SBI_RPXY_SETUP_SHMEM        0x1
+#define SBI_RPXY_SEND_NORMAL_MSG    0x2
+
 #define SBI_SMC_MM_VERSION             0x80
 #define SBI_SMC_MM_COMMUNICATE         0x81
 #define SBI_SMC_MM_COMPLETE_EVT        0x82
@@ -210,4 +213,19 @@ SbiCallSmcMm (
   IN  EFI_RISCV_MM_CONTEXT  *MmContextPtr
  );
 
+
+EFI_STATUS
+EFIAPI
+SbiRpxySetShmem(
+  IN UINT64 PageSize,
+  IN UINT64 ShmemPhys
+  );
+
+EFI_STATUS
+EFIAPI
+SbiRpxySendNormalMessage(
+  IN UINT32 TransportId,
+  IN UINT32 SrvGrpId,
+  IN UINT8 SrvId
+  );
 #endif

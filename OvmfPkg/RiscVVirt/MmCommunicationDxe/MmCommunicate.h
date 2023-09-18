@@ -20,4 +20,9 @@
 #define MM_CALLER_MAJOR_VER  0x1UL
 #define MM_CALLER_MINOR_VER  0x0
 
+#define RPMI_MM_TRANSPORT_ID           0x00
+#define RPMI_MM_SRV_GROUP              0x08
+#define RPMI_MM_SRV_MM_VERSION         0x01
+#define RPMI_MM_SRV_MM_COMMUNICATE     0x02
+
 #endif /* MM_COMMUNICATE_H_ */

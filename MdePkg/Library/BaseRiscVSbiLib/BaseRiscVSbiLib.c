@@ -230,24 +230,57 @@ SetFirmwareContextPointer (
 }
 
 /**
-  Send the MM data through OpenSBI FW SMC Extension SBI.
+  Set the RPXY Shared Memory.
 
-  @param    MmContextPtr   Pointer to MM Context.
+  @param    ShmemPhys   Shaed Memory Physical Address.
   @retval   EFI_SUCCESS    Success is returned from the functin in SBI.
 **/
 EFI_STATUS
 EFIAPI
-SbiCallSmcMm (
-  IN  EFI_RISCV_MM_CONTEXT  *MmContextPtr
- )
+SbiRpxySetShmem(
+  IN UINT64 PageSize,
+  IN UINT64 ShmemPhys
+  )
 {
   SBI_RET  Ret;
   Ret = SbiCall (
-          SBI_EXT_SMC,
-          MmContextPtr->FuncId,
-          2,
-          MmContextPtr->Cookie,
-          MmContextPtr->PayloadAddress
+          SBI_EXT_RPXY,
+          SBI_RPXY_SETUP_SHMEM,
+          6,
+          PageSize,
+          ShmemPhys,
+          0,
+          0,
+          0,
+          0
+          );
+  return TranslateError (Ret.Error);
+}
+
+/**
+  Send the MM data through OpenSBI FW RPXY Extension SBI.
+
+  @param    Transportd
+  @param    SrvGrpId
+  @param    SrvId
+  @retval   EFI_SUCCESS    Success is returned from the functin in SBI.
+**/
+EFI_STATUS
+EFIAPI
+SbiRpxySendNormalMessage(
+  IN UINT32 TransportId, 
+  IN UINT32 SrvGrpId,
+  IN UINT8 SrvId
+  )
+{
+  SBI_RET  Ret;
+  Ret = SbiCall (
+          SBI_EXT_RPXY,
+          SBI_RPXY_SEND_NORMAL_MSG,
+          3,
+          TransportId,
+          SrvGrpId,
+          SrvId
           );
   return TranslateError (Ret.Error);
 }
