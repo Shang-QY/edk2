@@ -33,7 +33,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #define RPMI_MM_TRANSPORT_ID  0x00
 #define RPMI_MM_SRV_GROUP     0x08
-#define RPMI_MM_SRV_COMPLETE  0x05
+#define RPMI_MM_SRV_COMPLETE  0x03
 
 PI_MM_CPU_DRIVER_ENTRYPOINT  CpuDriverEntryPoint = NULL;
 
@@ -110,13 +110,23 @@ DelegatedEventLoop (IN UINTN CpuId, IN UINT64 MmNsCommBufBase)
 {
   EFI_STATUS  Status;
   ASSERT (((EFI_MM_COMMUNICATE_HEADER *)MmNsCommBufBase)->MessageLength == 0);
+  Status = SbiRpxySetShmem(0x1000, MmNsCommBufBase & ~(EFI_PAGE_SIZE - 1));
+  if (EFI_ERROR (Status)) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "MmCommunicationInitialize: "
+      "Failed to set RPXY shared memory\n"
+      ));
+    Status = EFI_ACCESS_DENIED;
+    ASSERT (0);
+  }
 
   while (TRUE) {
 #ifdef MM_WITH_COVE_ENABLE
     CpuSleep ();
     Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
 #else
-    SbiRpxySendNormalMessage(RPMI_MM_TRANSPORT_ID, RPMI_MM_TRANSPORT_ID, RPMI_MM_SRV_COMPLETE);
+    SbiRpxySendNormalMessage(RPMI_MM_TRANSPORT_ID, RPMI_MM_SRV_GROUP, RPMI_MM_SRV_COMPLETE);
     Status = CpuDriverEntryPoint (0, CpuId, MmNsCommBufBase);
 #endif
     if (EFI_ERROR (Status)) {
